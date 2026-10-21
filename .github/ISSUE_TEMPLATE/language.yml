@@ -1,0 +1,22 @@
+name: Language correction / 語言補充
+description: Correct or add an expression with regional context.
+body:
+  - type: input
+    id: expression
+    attributes:
+      label: Expression and language / 詞句與語言
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Region, register and meaning / 地區、語氣與意思
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Reference and original example / 來源與原創例句
+      description: Link a supporting reference. Do not paste copyrighted dictionary entries.
+    validations:
+      required: true

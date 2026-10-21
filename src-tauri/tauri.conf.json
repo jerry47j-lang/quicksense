@@ -1,0 +1,10 @@
+{
+ "$schema":"https://schema.tauri.app/config/2",
+ "productName":"QuickSense","version":"0.1.0","identifier":"com.jerry.quicksense",
+ "build":{"beforeDevCommand":"npm run dev","devUrl":"http://localhost:5186","beforeBuildCommand":"npm run build","frontendDist":"../dist"},
+ "app":{"windows":[
+  {"label":"main","title":"QuickSense 快懂","width":1240,"height":860,"minWidth":760,"minHeight":600,"center":true,"backgroundColor":"#f8f5eb"},
+  {"label":"quick","title":"QuickSense · 快查","url":"index.html?quick=1","width":600,"height":670,"minWidth":440,"minHeight":400,"visible":false,"alwaysOnTop":true,"skipTaskbar":true,"backgroundColor":"#f8f5eb"}
+ ],"security":{"csp":"default-src 'self'; img-src 'self' data: asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost; script-src 'self'"}},
+ "bundle":{"active":true,"targets":"all","icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"],"macOS":{"minimumSystemVersion":"11.0"},"windows":{"nsis":{"languages":["English","TradChinese","Japanese","Korean"],"displayLanguageSelector":true}}}
+}

@@ -1,0 +1,17 @@
+name: Bug / 問題回報
+description: Report a reproducible desktop or learning issue.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: OS and app version / 系統與版本
+      placeholder: Windows 11 / macOS 15, QuickSense 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps, expected and actual behavior / 重現步驟
+      description: Use invented examples. Do not include passwords, private messages or service keys.
+    validations:
+      required: true

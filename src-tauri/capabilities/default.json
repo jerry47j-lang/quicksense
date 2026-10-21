@@ -1,0 +1,1 @@
+{"identifier":"local-windows","description":"Only packaged local app windows may use core events. Clipboard and network actions are explicit Rust commands.","windows":["main","quick"],"permissions":["core:default"]}

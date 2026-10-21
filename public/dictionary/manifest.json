@@ -1,0 +1,15 @@
+{
+  "id": "oewn-2025",
+  "label": "Open English WordNet 2025",
+  "language": "en",
+  "entries": 127311,
+  "senses": 182055,
+  "bytes": 34489805,
+  "source": "https://en-word.net/static/english-wordnet-2025.xml.gz",
+  "sourceSha256": "9ca6d1dcb75f822fdd66617f7d9da48142ace38dd544d6ad5e2feca1674ad3fe",
+  "license": "CC BY 4.0 + underlying Princeton WordNet terms",
+  "attribution": "Open English WordNet team; Princeton University WordNet",
+  "modified": "Converted from XML into lower-case, letter-indexed JSON; up to twelve senses and two examples per sense.",
+  "snapshot": "2025 edition",
+  "builtAt": "2026-10-21T12:48:28.905Z"
+}

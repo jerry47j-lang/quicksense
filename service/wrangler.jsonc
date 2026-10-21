@@ -1,0 +1,6 @@
+{
+ "name":"quicksense-translation","main":"worker.ts","compatibility_date":"2026-10-21",
+ "d1_databases":[{"binding":"DB","database_name":"quicksense-budget","database_id":"00000000-0000-0000-0000-000000000000","migrations_dir":"migrations"}],
+ "vars":{"MODEL":"gpt-5.4-mini-2026-03-17","MONTHLY_AI_TWD":"600","DAILY_REQUEST_LIMIT":"100","USD_TO_TWD_BUDGET_RATE":"40","BROWSER_ORIGIN":"http://127.0.0.1:5186"},
+ "observability":{"enabled":false}
+}

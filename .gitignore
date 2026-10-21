@@ -1,0 +1,10 @@
+node_modules/
+dist/
+target/
+src-tauri/target/
+.cache/
+.wrangler/
+.dev.vars
+.env
+artifacts/
+*.log
