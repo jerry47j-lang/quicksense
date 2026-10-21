@@ -95,10 +95,22 @@ export async function lookupLocal(
 export function lookupMeaning(result: LookupResult) {
   return (
     result.analysis?.translation ||
-    result.term?.meaning ||
+    (result.term && normalize(result.query) === normalize(result.term.example)
+      ? result.term.translation
+      : result.term?.meaning) ||
     result.dictionary?.senses[0]?.definitions[0] ||
     ""
   );
+}
+export function collectionQuery(result: LookupResult) {
+  // Save only the recognized expression when the rest of a sentence is unexplained.
+  if (
+    result.mode === "local" &&
+    result.term &&
+    normalize(result.query) !== normalize(result.term.example)
+  )
+    return result.term.term;
+  return result.query;
 }
 export function filterTerms(text: string, language: string, kind: string) {
   const q = normalize(text);

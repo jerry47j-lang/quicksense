@@ -4,7 +4,7 @@ Status: working preview, 2026-10-21. Live AI and native visual verification rema
 
 ## Automated
 
-- **28 tests pass**, with TypeScript checks. Coverage includes phrase boundaries, Unicode normalization, source-language filters, English dictionary fallback, unsafe dictionary property names, review intervals, backup import/export, ordered lessons and translation input/output contracts.
+- **29 tests pass**, with TypeScript checks. Coverage includes phrase boundaries, Unicode normalization, source-language filters, English dictionary fallback, unsafe dictionary property names, review intervals, backup import/export, ordered lessons and translation input/output contracts. Partial phrase matches are saved as phrase cards; curated full examples retain their complete translations.
 - Seven service integration cases run against an actual in-memory SQLite table: authentication, invalid input, zero budget, concurrent reservations, daily-cap rollback, successful usage settlement, unknown network outcomes and browser-origin rejection. Some cases cover more than one check. Provider responses are mocked; no paid requests were made.
 - `npm run build` passes and generates the production frontend. `npm audit` reports zero known vulnerabilities for the installed lockfile.
 - The Cloudflare Worker dry-run bundle passes. This is not a deployment or a real model response.

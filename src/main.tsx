@@ -51,6 +51,7 @@ import { terms } from "./data/terms";
 import { lessons } from "./data/lessons";
 import {
   filterTerms,
+  collectionQuery,
   languageNames,
   lookupLocal,
   lookupMeaning,
@@ -325,7 +326,7 @@ function App() {
   }
   function collect() {
     if (!result || result.mode === "miss") return;
-    const key = normalize(result.query);
+    const key = normalize(collectionQuery(result));
     if (saved.some((x) => normalize(x.query) === key)) {
       notify("這個內容已經在你的單字庫裡。");
       return;
@@ -333,12 +334,13 @@ function App() {
     updateSaved([
       {
         id: crypto.randomUUID(),
-        query: result.query,
+        query: collectionQuery(result),
         meaning: lookupMeaning(result),
-        language: result.term?.language || result.analysis?.language || "en",
-        source:
-          result.term?.source ||
-          (result.dictionary ? "https://en-word.net/" : profile.serviceUrl),
+        language: result.analysis?.language || result.term?.language || "en",
+        source: result.analysis
+          ? profile.serviceUrl
+          : result.term?.source ||
+            (result.dictionary ? "https://en-word.net/" : profile.serviceUrl),
         createdAt: Date.now(),
         dueAt: Date.now(),
         reviews: 0,
@@ -474,7 +476,9 @@ function App() {
     !sentenceMatch;
   const savedAlready =
     !!result &&
-    saved.some((x) => normalize(x.query) === normalize(result.query));
+    saved.some(
+      (x) => normalize(x.query) === normalize(collectionQuery(result)),
+    );
   const completed = profile.completedLessons.length;
   const nextLesson =
     lessons.find((l) => !profile.completedLessons.includes(l.id)) || lessons[0];

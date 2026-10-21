@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { collectionQuery, lookupMeaning } from "../src/lib/lookup";
 import {
   findTerm,
   normalize,
@@ -95,6 +96,18 @@ describe("language lookup", () => {
   });
 });
 describe("learning and backups", () => {
+  it("keeps partial phrase explanations and curated complete examples distinct in saved study cards", async () => {
+    const partial = await lookupLocal(
+      "Please circle back tomorrow with the numbers.",
+    );
+    expect(collectionQuery(partial)).toBe("circle back");
+    expect(lookupMeaning(partial)).toBe(partial.term?.meaning);
+    const example = await lookupLocal(
+      "Can we circle back on this after lunch?",
+    );
+    expect(collectionQuery(example)).toBe(example.query);
+    expect(lookupMeaning(example)).toBe(example.term?.translation);
+  });
   const item: SavedItem = {
     id: "1",
     query: "FYI",
