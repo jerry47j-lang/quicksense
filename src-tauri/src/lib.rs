@@ -2,6 +2,8 @@ use std::sync::Mutex;
 use tauri::{Emitter,Manager,State,menu::{Menu,MenuItem},tray::{TrayIconBuilder,TrayIconEvent,MouseButton,MouseButtonState}};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt,ShortcutState};
+use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 #[derive(Default)]
 struct Pending(Mutex<Option<String>>);
@@ -16,6 +18,30 @@ fn show_quick(app:&tauri::AppHandle){
 }
 #[tauri::command]
 fn read_clipboard(app:tauri::AppHandle)->Result<String,String>{app.clipboard().read_text().map(|s|s.chars().take(6000).collect()).map_err(|_|"clipboard_unavailable".into())}
+#[tauri::command]
+fn write_clipboard(app:tauri::AppHandle,text:String)->Result<(),String>{
+ if text.len()>100000{return Err("input_too_long".into());}
+ app.clipboard().write_text(text).map_err(|_|"clipboard_unavailable".into())
+}
+#[tauri::command]
+fn open_reference(app:tauri::AppHandle,url:String)->Result<(),String>{
+ let parsed=url::Url::parse(&url).map_err(|_|"invalid_reference")?;
+ if parsed.scheme()!="https"||!parsed.username().is_empty()||parsed.password().is_some()||!matches!(parsed.host_str(),Some("github.com"|"en.wiktionary.org"|"en-word.net"|"creativecommons.org")){return Err("invalid_reference".into());}
+ app.opener().open_url(url,None::<&str>).map_err(|_|"open_failed".into())
+}
+#[tauri::command]
+async fn export_backup(app:tauri::AppHandle,data:String)->Result<bool,String>{
+ if data.len()>20*1024*1024{return Err("backup_too_large".into());}
+ let json:serde_json::Value=serde_json::from_str(&data).map_err(|_|"invalid_backup")?;
+ if json.get("format").and_then(|v|v.as_str())!=Some("quicksense-backup"){return Err("invalid_backup".into());}
+ tauri::async_runtime::spawn_blocking(move||{
+  let selected=app.dialog().file().set_title("Export QuickSense backup").set_file_name("quicksense-backup.json").add_filter("QuickSense JSON",&["json"]).blocking_save_file();
+  let Some(file)=selected else{return Ok(false);};
+  let path=file.into_path().map_err(|_|"invalid_backup_path".to_owned())?;
+  std::fs::write(path,data).map_err(|_|"backup_write_failed".to_owned())?;
+  Ok(true)
+ }).await.map_err(|_|"backup_write_failed".to_owned())?
+}
 #[tauri::command]
 fn take_pending_query(state:State<'_,Pending>)->Option<String>{state.0.lock().ok().and_then(|mut v|v.take())}
 #[tauri::command]
@@ -46,9 +72,11 @@ pub fn run(){
  tauri::Builder::default()
  .manage(Pending::default())
  .plugin(tauri_plugin_single_instance::init(|app,_,_|show_main(app)))
+ .plugin(tauri_plugin_dialog::init())
+ .plugin(tauri_plugin_opener::init())
  .plugin(tauri_plugin_clipboard_manager::init())
  .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app,_,event|{if event.state()==ShortcutState::Pressed{show_quick(app);}}).build())
- .invoke_handler(tauri::generate_handler![read_clipboard,take_pending_query,open_main,hide_quick,save_service_key,has_service_key,analyze_text])
+ .invoke_handler(tauri::generate_handler![read_clipboard,write_clipboard,open_reference,export_backup,take_pending_query,open_main,hide_quick,save_service_key,has_service_key,analyze_text])
  .setup(|app|{
   let show=MenuItem::with_id(app,"show","Open QuickSense",true,None::<&str>)?;
   let quick=MenuItem::with_id(app,"quick","Quick lookup from clipboard",true,None::<&str>)?;
