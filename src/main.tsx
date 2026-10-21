@@ -655,7 +655,10 @@ function App() {
                       <button
                         className={profile.mode === id ? "selected" : ""}
                         key={id}
-                        onClick={() => updateProfile({ mode: id })}
+                        onClick={() => {
+                          updateProfile({ mode: id });
+                          if (id === "break") startLesson(nextLesson);
+                        }}
                       >
                         <Icon size={13} />
                         {label}
@@ -685,6 +688,21 @@ function App() {
           )}
           {(view === "lookup" || quick) && (
             <>
+              {!quick && profile.mode === "meeting" && (
+                <div className="meeting-bar">
+                  <span>
+                    <Headphones size={15} />
+                    開會快查 · 精簡畫面
+                  </span>
+                  <button
+                    className="text-button"
+                    onClick={() => updateProfile({ mode: "work" })}
+                  >
+                    <Monitor size={14} />
+                    回到上班模式
+                  </button>
+                </div>
+              )}
               <section className="lookup-panel">
                 <div className="panel-title">
                   <div>
@@ -919,6 +937,19 @@ function App() {
                                 <ClipboardPaste size={14} />
                                 複製意思
                               </button>
+                              {!result.analysis && (
+                                <button
+                                  disabled={busy}
+                                  onClick={() =>
+                                    profile.allowOnline && profile.serviceUrl
+                                      ? void runLookup(result.query, true)
+                                      : setModal("online")
+                                  }
+                                >
+                                  <Cloud size={14} />
+                                  連線翻譯與解釋
+                                </button>
+                              )}
                             </div>
                           </div>
                           {term && (

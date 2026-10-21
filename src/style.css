@@ -2029,6 +2029,23 @@ dialog::backdrop {
 .meeting-mode .greeting {
   display: none;
 }
+.meeting-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 18px;
+  color: #637b51;
+}
+.meeting-bar > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.meeting-bar .text-button {
+  color: #48673b;
+}
 .meeting-mode .lookup-panel {
   margin-top: 5px;
 }
@@ -3235,6 +3252,91 @@ dialog::backdrop {
   }
   .greeting > div > p,
   .page-description {
+    font-size: 12px;
+  }
+}
+/* Keep supporting text readable on the cream paper, including small windows. */
+:is(
+  .page-description,
+  .meaning-note,
+  .help-note,
+  .settings-box > p,
+  .setting-row p,
+  .pack-row p,
+  .lesson-card p,
+  .pattern-box p,
+  .lesson-example > span,
+  .question-counter,
+  .answer-note p,
+  .dialog-content > p,
+  .term-card > p,
+  .saved-list p,
+  .empty-state p,
+  .review-card > p,
+  .daily-body p,
+  .usage-card > span:not(.small-overline),
+  .review-meaning
+) {
+  color: #627253;
+}
+:is(
+  .header-breadcrumb,
+  .header strong,
+  .nav-caption,
+  .local-label,
+  .profile-mini > div > span,
+  .sidebar-tip p,
+  .sidebar-tip > span,
+  .status-pill,
+  .try-row > span,
+  .try-row > button,
+  .result-tabs button,
+  .term-label,
+  .world-summary,
+  .term-region,
+  .result-foot,
+  .section-line > span,
+  .progress-label,
+  .small-overline,
+  .room-bottom,
+  .language-hint,
+  .input-count,
+  .keyboard-hint,
+  footer
+) {
+  color: #707b5d;
+}
+.sidebar nav > button:not(.active),
+.sidebar-bottom > button,
+.sidebar-bottom > a {
+  color: #677557;
+}
+.profile-mini strong {
+  font-size: 12px;
+}
+.profile-mini > div > span {
+  font-size: 10px;
+}
+.sidebar-tip {
+  margin-top: 24px;
+}
+.sidebar-tip strong {
+  color: #5d764a;
+}
+.meaning-actions button,
+.paste-button,
+.text-button {
+  color: #58763f;
+}
+.partial-note {
+  color: #7d693d;
+  font-size: 12px;
+}
+@media (max-width: 550px) {
+  .result-source {
+    font-size: 10px;
+  }
+  .result-tabs button {
     font-size: 12px;
   }
 }
