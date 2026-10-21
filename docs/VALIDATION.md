@@ -9,6 +9,7 @@ Status: working preview, 2026-10-21. Live AI and native visual verification rema
 - `npm run build` passes and generates the production frontend. `npm audit` reports zero known vulnerabilities for the installed lockfile.
 - The Cloudflare Worker dry-run bundle passes. This is not a deployment or a real model response.
 - GitHub Actions independently builds Windows x64, macOS Apple Silicon and macOS Intel installers. See the repository Actions page for current outcomes.
+- All three final native builds passed for application commit `56a9ed0`: [CI run 39609371893](https://github.com/jerry47j-lang/quicksense/actions/runs/39609371893). Later commits only add documentation. Installers are distributed as the `v0.1.0-preview.1` developer prerelease.
 
 ## Browser interaction
 
