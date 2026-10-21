@@ -15,5 +15,6 @@ Concrete design decisions:
 - Name, companion, saved words and eight lesson stages persist locally. Progress comes from answered questions rather than decorative fake statistics.
 - AI output is checked against a structured contract, and a database reservation gate limits requests before spending.
 - Separate Windows, Apple Silicon and Intel macOS builds are required. Native build success, native visual testing and code signing are recorded separately.
+- The verified CI-generated Rust lockfile is retained with the source, and runtime JavaScript licenses are included in desktop assets. Four README entries link to actual interface screenshots and shared validation records.
 
 See [VALIDATION](VALIDATION.md) for the checks actually completed and outstanding work. No external design/test participants, demo video, public-user counts or Codex application acceptance are claimed.

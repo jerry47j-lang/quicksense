@@ -4,6 +4,10 @@
 
 **Understand quickly. Learn a little every day.**
 
+[Download desktop preview](https://github.com/jerry47j-lang/quicksense/releases) · [Build and test evidence](docs/VALIDATION.md)
+
+![QuickSense shared desktop interface, currently Traditional Chinese](docs/images/desktop-preview.png)
+
 A quiet desktop language companion for Windows and macOS. Copy an unfamiliar expression, press **Ctrl+Shift+Space** (Windows) or **Cmd+Shift+Space** (macOS), and look it up in a small window. Your own pixel study, name and character make the learning space yours.
 
 ## What works in this version

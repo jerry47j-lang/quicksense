@@ -4,6 +4,10 @@
 
 **빠르게 이해하고, 매일 조금씩 배우세요. Windows와 macOS용 작은 언어 공부방입니다.**
 
+[데스크톱 미리 보기 다운로드](https://github.com/jerry47j-lang/quicksense/releases) · [검증 기록](docs/VALIDATION.md)
+
+![QuickSense 인터페이스, 현재 번체 중국어](docs/images/desktop-preview.png)
+
 텍스트를 복사한 뒤 Windows에서는 **Ctrl+Shift+Space**, Mac에서는 **Cmd+Shift+Space**를 누르면 작은 검색 창이 열립니다. 이름과 픽셀 캐릭터를 고르고 실제로 만난 표현을 모아 학습할 수 있습니다.
 
 ## 기능

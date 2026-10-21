@@ -4,6 +4,10 @@
 
 **快快看懂，慢慢學會。你的 Windows／macOS 語言小書房。**
 
+[下載桌面預覽版](https://github.com/jerry47j-lang/quicksense/releases) · [實際驗證紀錄](docs/VALIDATION.md)
+
+![快懂的像素小書房與查詢介面](docs/images/desktop-preview.png)
+
 複製看不懂的外文，按 Windows 的 **Ctrl+Shift+Space** 或 macOS 的 **Cmd+Shift+Space**，就能在小窗查詢。設定自己的名字與像素夥伴，從每天真正遇到的內容開始學習。
 
 ## 這一版提供什麼

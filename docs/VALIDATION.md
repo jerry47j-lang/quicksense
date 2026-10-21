@@ -1,16 +1,32 @@
 # Validation record
 
-Status: preview under verification, 2026-10-21.
+Status: working preview, 2026-10-21. Live AI and native visual verification remain outstanding.
 
 ## Automated
 
-- TypeScript checks and unit tests cover phrase boundaries, Unicode normalization, source-language filters, English dictionary fallback, unsafe dictionary property names, review intervals, backup import/export, ordered lessons and translation input/output contracts.
-- `npm run build` generates the production frontend.
+- **28 tests pass**, with TypeScript checks. Coverage includes phrase boundaries, Unicode normalization, source-language filters, English dictionary fallback, unsafe dictionary property names, review intervals, backup import/export, ordered lessons and translation input/output contracts.
+- Seven service integration cases run against an actual in-memory SQLite table: authentication, invalid input, zero budget, concurrent reservations, daily-cap rollback, successful usage settlement, unknown network outcomes and browser-origin rejection. Some cases cover more than one check. Provider responses are mocked; no paid requests were made.
+- `npm run build` passes and generates the production frontend. `npm audit` reports zero known vulnerabilities for the installed lockfile.
+- The Cloudflare Worker dry-run bundle passes. This is not a deployment or a real model response.
 - GitHub Actions independently builds Windows x64, macOS Apple Silicon and macOS Intel installers. See the repository Actions page for current outcomes.
 
 ## Browser interaction
 
-Browser checks and screenshots are recorded here as they are completed. The browser preview exercises the shared interface, dictionary and local learning flows; it does not verify OS keyring, native global shortcuts or tray behavior.
+Observed in the shared browser UI:
+
+- A real dictionary lookup of `serendipity` returns the packaged WordNet definition.
+- Saving a result creates a visible collection row. Revealing a review and selecting remembered finishes that session and changes its due state.
+- Naming the study, answering both first-lesson questions, unlocking lesson two, and reloading preserve the local learning state.
+- Filtering world expressions to Japanese returns seven entries. Japanese and English quick-window lookups show the appropriate contextual notes.
+- A partial `circle back` match is labeled as a phrase explanation rather than a complete sentence translation. An unknown sentence shows a service-configuration prompt, without an invented result.
+- Ctrl+Enter lookup, returning from meeting mode, and normal/compact layouts work. At the 440-pixel quick-window width, measured content width stays within the viewport.
+- Browser backup download contains the collected word and completed lesson, excludes the service URL/key, and disables online analysis in the exported profile.
+
+The browser preview does not verify OS keyring, native global shortcuts, native save dialogs or tray behavior. Screenshots use a local test profile and show actual app state:
+
+![Study and lookup](images/desktop-preview.png)
+
+![Meeting lookup](images/meeting-lookup.png)
 
 ## Not yet verified
 

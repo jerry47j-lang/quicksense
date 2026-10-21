@@ -2,6 +2,10 @@ name: Desktop builds
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'README*.md'
+      - 'THIRD_PARTY_NOTICES.md'
   workflow_dispatch:
 permissions:
   contents: read
