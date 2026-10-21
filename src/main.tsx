@@ -360,8 +360,8 @@ function App() {
     const voice = voices.find((v) =>
       v.lang.toLowerCase().startsWith(code.toLowerCase()),
     );
-    if (!voice && voices.length === 0) {
-      notify("目前沒有可用的系統語音，請先安裝對應語音。");
+    if (!voice) {
+      notify("目前沒有這個語言的系統語音，請先安裝對應語音。");
       return;
     }
     const u = new SpeechSynthesisUtterance(text);
@@ -924,7 +924,12 @@ function App() {
                               </button>
                               <button
                                 onClick={() =>
-                                  speak(result.query, term?.language || "en")
+                                  speak(
+                                    result.query,
+                                    result.analysis?.language ||
+                                      term?.language ||
+                                      "en",
+                                  )
                                 }
                               >
                                 <Volume2 size={15} />
