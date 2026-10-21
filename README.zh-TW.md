@@ -6,6 +6,8 @@
 
 [下載桌面預覽版](https://github.com/jerry47j-lang/quicksense/releases) · [實際驗證紀錄](docs/VALIDATION.md)
 
+[開始使用：四語操作說明](docs/GETTING_STARTED.md#繁體中文)
+
 ![快懂的像素小書房與查詢介面](docs/images/desktop-preview.png)
 
 複製看不懂的外文，按 Windows 的 **Ctrl+Shift+Space** 或 macOS 的 **Cmd+Shift+Space**，就能在小窗查詢。設定自己的名字與像素夥伴，從每天真正遇到的內容開始學習。

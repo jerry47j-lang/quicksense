@@ -6,6 +6,8 @@
 
 [デスクトッププレビューをダウンロード](https://github.com/jerry47j-lang/quicksense/releases) · [検証記録](docs/VALIDATION.md)
 
+[はじめて使う方へ](docs/GETTING_STARTED.md#日本語)
+
 ![QuickSense の画面、現在は繁体字中国語](docs/images/desktop-preview.png)
 
 文字をコピーし、Windows は **Ctrl+Shift+Space**、Mac は **Cmd+Shift+Space** を押すと小さな検索ウィンドウが開きます。自分の名前とピクセルキャラクターを設定し、実際に出会った表現を集めて学べます。
