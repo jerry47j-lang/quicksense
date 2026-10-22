@@ -31,3 +31,9 @@ OpenCC-JS (MIT, The nk2028 Project) is a conversion-time dependency. [License](d
 ## Google Translate handoff
 
 Only clicking the external link sends the submitted text and selected languages to the official Google Translate website. Its own terms and availability apply. QuickSense does not scrape Google, use an unofficial translation API, proxy requests or bundle Google content.
+
+## Inline MyMemory translation and local language detection
+
+The official MyMemory GET API is used only after explicit opt-in. Submitted text and language pair are sent directly from the client without service keys, email or cookies. Anonymous limits are 5,000 characters/day, shared by provider network-IP accounting. Queries may be retained long term under [MyMemory terms](https://mymemory.translated.net/terms-and-conditions); do not use confidential material. QuickSense does not submit SET/archive contributions or bypass limits. Successful results are cached in this app session only, rendered as plain text and not bundled as a translation corpus. Google handoff remains a separate fallback.
+
+franc-min 6.2.0, trigram-utils and n-gram perform local statistical language detection and retain MIT license notices in public/licenses/npm-franc-min.txt, npm-trigram-utils.txt and npm-n-gram.txt. Automatic language identification is a guess, especially for short or mixed text; a manual source selector is provided.

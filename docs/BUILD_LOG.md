@@ -31,3 +31,17 @@ Jerry asked whether GitHub visitors could use the app immediately, and requested
 - Updated four equivalent README guides, troubleshooting and privacy. Native packages remain developer previews; no paid hosting, provider call, signing or notarization was purchased.
 
 See VALIDATION for actual evidence. Developer QA is not claimed as a five-person novice study or physical-device acceptance.
+
+## 2026-10-22 — fix typed input and real inline translation
+
+Jerry reported that typing did not translate and automatic translation did not work. The 0.2.0 free path was only local lookup plus a website handoff; that did not meet the intended interaction.
+
+- Added idle lookup after one second, IME composition handling, manual translation, source/target refresh, cancellation and a latest-request guard. Editing text immediately removes obsolete results; stopping or disabling automatic mode cancels the pending request.
+- Added the official MyMemory GET API for opt-in free inline sentence translation. No secret, email, cookies, proxy or paid provider call is required. It respects the official 500-byte segment limit, caps anonymous local character usage, stops on quota/errors and caches completed results only in the session.
+- Explicit first-use disclosure covers automatic sending, network-IP shared quota (5,000 characters/day) and potential long-term provider retention. Consent is revocable in Preferences and not imported/exported between devices. Google Translate remains a separate fallback.
+- Added local statistical language guessing, manual correction, source/target labels and genuine provider provenance on saved sentence cards. Machine translation is not described as grammar correction or generated reply analysis.
+- Four guides and privacy notes were updated. No paid service was added.
+
+Developer browser checks observed Chinese→English inline, English→Traditional Chinese without pressing a button, Chinese→Japanese after changing the target, manual mode, and revocation. Automated coverage now totals 59 tests including timeout, quota, cancellation, Unicode/byte segmentation, caching, errors and backup consent. Actual public-origin and native build evidence is recorded in VALIDATION.
+
+The public fix was verified at the deployed HTTPS origin, not only localhost. The final Pages workflow retains a security gate and builds in the audited Windows environment before transferring its artifact to Ubuntu for publishing; earlier Linux npm Quick-audit errors are recorded in VALIDATION. See the latest public screenshot and v0.2.1 release there.

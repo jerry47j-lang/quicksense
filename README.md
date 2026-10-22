@@ -8,13 +8,13 @@
 
 Use the browser app on Windows or macOS without installation, an account, API keys or a paid backend. The current UI and learning notes are Traditional Chinese. Four README languages do not imply four fully localized interfaces.
 
-![Actual public app](docs/images/free-web-app.png)
+![Actual public app](docs/images/inline-translation.png)
 
 ## First minute
 
 1. Choose **先試一次：deadline** (try deadline) to see its Chinese meaning. Pick a name later.
-2. Paste a word or sentence into **查詢文字** and click **快懂一下**. Chinese input automatically targets English; other input targets Traditional Chinese. You can select a target manually.
-3. For an arbitrary sentence, click **在 Google 翻譯開啟**. The official Google Translate website opens in a new tab with your submitted text and selected language. QuickSense retains your input. This is an explicit external website handoff, not an embedded free AI API. Only clicking the link sends text to Google; avoid confidential work material.
+2. Paste a word or sentence into **查詢文字** and click **翻譯／查字**. Chinese input automatically targets English; other input targets Traditional Chinese. You can select a target manually.
+3. On first use, choose **啟用免費整句翻譯** and read the MyMemory data/limit notice. After consent, typed sentences are translated **inside QuickSense**. With **停筆 1 秒自動翻譯／查字** checked, stop typing for one second; no button click is needed. Uncheck it to use **翻譯／查字** manually. Source/target changes also refresh results in automatic mode. Google Translate remains a labeled external fallback, not the primary engine.
 4. Save a dictionary result, or paste a checked translation back with **把確認過的翻譯存回來**. Review under **我的單字庫**, learn under **學習小徑**.
 
 If clipboard access fails, paste directly with Ctrl+V / Cmd+V. If dictionary loading fails, your input stays and retry/external translation remain available. No payment is requested.
@@ -26,7 +26,9 @@ If clipboard access fails, paste directly with Ctrl+V / Cmd+V. If dictionary loa
 - Eight ordered A1–B1 workplace lessons, local collections, spaced review, JSON backup/import, name and pixel companions. No account sync; back up before changing devices/origins or clearing browser data.
 - PWA installation where supported by the browser. It does not add native tray/global shortcuts.
 
-The target dropdown controls external translation, not the existing Chinese notes. Arbitrary grammar correction and generated AI replies are not included in the free offline engine. The public app never calls the optional paid service or asks for service passwords. Advanced native users can separately deploy the [optional AI service](docs/TRANSLATION_SERVICE.md), requiring secrets and potentially incurring costs.
+The target dropdown controls inline and fallback translation, not the existing Chinese notes. Arbitrary grammar correction and generated AI replies are not included in the free offline engine. The public app never calls the optional paid service or asks for service passwords. Advanced native users can separately deploy the [optional AI service](docs/TRANSLATION_SERVICE.md), requiring secrets and potentially incurring costs.
+
+Free inline translation uses the official MyMemory API, anonymously limited to **5,000 characters/day** by the provider's network-IP quota; the app also caps local requests. An office may share the allowance. There is no paid upgrade/fallback request. Text and selected languages go to MyMemory **only after opt-in**, automatically after idle typing if enabled. The service may retain submitted text long term; avoid secrets/confidential content. Disable it in Preferences. Cache is session-only; JSON backups do not transfer consent. Source detection can misread short/mixed input; choose the source manually when needed. See [limits](https://mymemory.translated.net/doc/usagelimits.php) and [data terms](https://mymemory.translated.net/terms-and-conditions).
 
 ## Desktop status
 
