@@ -101,6 +101,11 @@ button:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   z-index: 30;
+  overflow-y: auto;
+}
+.sidebar > * { flex-shrink: 0; }
+@media (max-height: 820px) {
+  .sidebar .sidebar-tip { display: none; }
 }
 .logo {
   display: flex;

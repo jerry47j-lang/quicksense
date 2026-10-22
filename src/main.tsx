@@ -1059,11 +1059,8 @@ function App() {
                                     : "這個詞尚無繁中詞義，先顯示英文辭義；下方可接著免費翻譯。"}
                                 </div>
                               )}
-                              {result.dictionary?.phonetic && (
-                                <p className="phonetic">
-                                  /{result.dictionary.phonetic}/ ·{" "}
-                                  {result.dictionary.word}
-                                </p>
+                              {result.dictionary && (
+                                <p className="phonetic">{result.dictionary.word}</p>
                               )}
                               {result.dictionary?.translationZh &&
                                 result.dictionary.senses[0] && (
