@@ -20,8 +20,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm audit --audit-level=high
+      - run: npm ci --no-audit
+      # Audit the complete reproducible lockfile rather than an OS-filtered
+      # installed tree. Do not fall through a failed security check.
+      - run: npm audit --package-lock-only --audit-level=high --fetch-timeout=30000 --fetch-retries=2
       - run: npm run check
       - run: npm run build
         env:
