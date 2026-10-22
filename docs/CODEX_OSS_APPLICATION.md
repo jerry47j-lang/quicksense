@@ -1,6 +1,6 @@
-# Codex for Open Source — QuickSense application draft
+# Codex for Open Source — QuickSense application record
 
-Status: prepared, not submitted. Applicant contact details have been supplied privately. The OpenAI organization ID and final acceptance of program terms remain pending. Do not publish account identifiers or personal contact details in this repository.
+Status: submitted on 2026-10-22 (Asia/Taipei), after Jerry explicitly accepted the program terms and authorized submission. The official form displayed a thank-you message confirming receipt and said selected applicants would be contacted. This confirms submission, not selection or an awarded benefit. Applicant contact details and the OpenAI organization ID were supplied privately; do not publish them in this repository.
 
 Official program: https://developers.openai.com/community/codex-for-oss
 Official form: https://openai.com/form/codex-for-oss/
