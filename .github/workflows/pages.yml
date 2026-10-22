@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Match the audited Windows build environment used by desktop CI.
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,9 +33,9 @@ jobs:
         env:
           GITHUB_PAGES: 'true'
       - run: node scripts/verify-offline.mjs
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
+          name: verified-web-dist
           path: dist
   deploy:
     needs: build
@@ -43,5 +44,13 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-web-dist
+          path: dist
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
       - id: deployment
         uses: actions/deploy-pages@v4
