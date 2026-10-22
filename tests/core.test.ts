@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { collectionQuery, lookupMeaning } from "../src/lib/lookup";
+import { collectionQuery, lookupMeaning,clearLookupCache } from "../src/lib/lookup";
 import {
   findTerm,
   normalize,
@@ -16,7 +16,7 @@ import {
 } from "../src/lib/storage";
 import { validInput, isAnalysis } from "../service/worker";
 import type { SavedItem } from "../src/types";
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {vi.unstubAllGlobals();clearLookupCache();});
 describe("language lookup", () => {
   it.each([
     ["FYI", "fyi"],

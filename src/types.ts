@@ -36,7 +36,17 @@ export type DictionarySense = {
   examples: string[];
   synonyms: string[];
 };
-export type DictionaryEntry = { word: string; senses: DictionarySense[] };
+export type BilingualEntry = {
+  word: string;
+  translationZh: string;
+  phonetic: string;
+};
+export type DictionaryEntry = {
+  word: string;
+  senses: DictionarySense[];
+  translationZh?: string;
+  phonetic?: string;
+};
 export type Analysis = {
   meaning: string;
   tone: string;
@@ -70,6 +80,7 @@ export type Profile = {
   name: string;
   avatar: "sprout" | "cat" | "fox";
   target: Language;
+  smartTarget?: boolean;
   source: Language | "auto";
   mode: "work" | "break" | "meeting";
   serviceUrl: string;

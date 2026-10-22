@@ -47,6 +47,10 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { PixelAvatar, PixelRoom } from "./components/PixelRoom";
+import { FreeTranslation } from "./components/FreeTranslation";
+import { assetPath } from "./lib/assets";
+import { resolveTarget } from "./lib/free-translation";
+import { registerOffline, downloadOfflinePack } from "./lib/offline";
 import { terms } from "./data/terms";
 import { lessons } from "./data/lessons";
 import {
@@ -68,6 +72,7 @@ import {
   saveItems,
   saveProfile,
   scheduleReview,
+  storageAvailable,
 } from "./lib/storage";
 import {
   analyze,
@@ -103,27 +108,39 @@ function App() {
     [profile, setProfile] = useState<Profile>(loadProfile),
     [saved, setSaved] = useState<SavedItem[]>(loadSaved),
     [history, setHistory] = useState<string[]>(loadHistory);
-  const [query, setQuery] = useState(
-      quick ? "" : "Can we circle back on this after lunch?",
-    ),
-    [result, setResult] = useState<LookupResult | null>(
-      quick
-        ? null
-        : {
-            query: "Can we circle back on this after lunch?",
-            term: terms[0],
-            mode: "local",
-          },
-    );
+  const [query, setQuery] = useState(""),
+    [result, setResult] = useState<LookupResult | null>(null);
   const [busy, setBusy] = useState(false),
     [toast, setToast] = useState(""),
     [expanded, setExpanded] = useState(false),
     [tab, setTab] = useState<"meaning" | "grammar" | "reply">("meaning");
   const [modal, setModal] = useState<
-      "name" | "review" | "backup" | "online" | null
-    >(null),
+      | "name"
+      | "welcome"
+      | "manual"
+      | "review"
+      | "backup"
+      | "online"
+      | "ai"
+      | null
+    >(!quick && !profile.onboarded ? "welcome" : null),
     [nameDraft, setNameDraft] = useState(profile.name),
     [serviceKey, setServiceKey] = useState("");
+  const [manualDraft, setManualDraft] = useState(""),
+    [offlineReady, setOfflineReady] = useState(false),
+    [packProgress, setPackProgress] = useState<{
+      loaded: number;
+      total: number;
+    } | null>(null),
+    [packStatus, setPackStatus] = useState(""),
+    [chineseManifest, setChineseManifest] = useState<{
+      entries: number;
+      lookupForms: number;
+      bytes: number;
+    } | null>(null),
+    [isConnected, setConnected] = useState(navigator.onLine);
+  const downloadRef = useRef<AbortController | null>(null);
+  const [storageOk, setStorageOk] = useState(storageAvailable);
   const [worldText, setWorldText] = useState(""),
     [worldLanguage, setWorldLanguage] = useState("all"),
     [worldKind, setWorldKind] = useState("all"),
@@ -175,17 +192,39 @@ function App() {
     return () => document.removeEventListener("click", openReference);
   }, []);
   useEffect(() => {
-    fetch("/dictionary/manifest.json")
+    fetch(assetPath("dictionary/manifest.json"))
       .then((r) => r.json())
       .then(setManifest)
       .catch(() => {});
+    fetch(assetPath("dictionary/zh-TW/manifest.json"))
+      .then((r) => r.json())
+      .then(setChineseManifest)
+      .catch(() => {});
+    if (!desktop && !import.meta.env.DEV)
+      void registerOffline().then(setOfflineReady);
+    const onNetwork = () => setConnected(navigator.onLine);
+    const onStorageUnavailable = () => setStorageOk(false);
+    window.addEventListener(
+      "quicksense-storage-unavailable",
+      onStorageUnavailable,
+    );
+    window.addEventListener("online", onNetwork);
+    window.addEventListener("offline", onNetwork);
     const onStorage = () => {
       setSaved(loadSaved());
       setProfile(loadProfile());
       setHistory(loadHistory());
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(
+        "quicksense-storage-unavailable",
+        onStorageUnavailable,
+      );
+      window.removeEventListener("online", onNetwork);
+      window.removeEventListener("offline", onNetwork);
+    };
   }, []);
   useEffect(() => {
     if (modal) dialogRef.current?.showModal();
@@ -257,6 +296,7 @@ function App() {
     }
     const request = ++requestRef.current;
     setBusy(true);
+    setResult(null);
     setTab("meaning");
     setExpanded(false);
     try {
@@ -266,21 +306,23 @@ function App() {
       setResult(local);
       setHistory(addHistory(input));
       if (
-        forceOnline ||
-        (p.allowOnline && p.serviceUrl && local.mode === "miss")
+        desktop &&
+        (forceOnline ||
+          (p.allowOnline && p.serviceUrl && local.mode === "miss"))
       ) {
         if (!p.allowOnline || !p.serviceUrl) {
           setModal("online");
           return;
         }
-        const cacheKey = `quicksense.cache:${p.serviceUrl}:${p.source}:${p.target}:${input}`;
+        const target = resolveTarget(input, p);
+        const cacheKey = `quicksense.cache:${p.serviceUrl}:${p.source}:${target}:${input}`;
         let cached: string | null = null;
         try {
           cached = sessionStorage.getItem(cacheKey);
         } catch {}
         const analysis = cached
           ? JSON.parse(cached)
-          : await analyze(input, p.source, p.target, p.serviceUrl);
+          : await analyze(input, p.source, target, p.serviceUrl);
         if (request !== requestRef.current) return;
         setResult({ ...local, mode: "online", analysis, cached: !!cached });
         if (!cached)
@@ -293,13 +335,18 @@ function App() {
         e instanceof Error ? e.message : typeof e === "string" ? e : "unknown";
       notify(
         code === "dictionary_unavailable"
-          ? "離線辭典尚未載入，請確認資料包已安裝。"
+          ? "詞庫暫時載入失敗。可以重試，或先用免費整句翻譯；你的文字已保留。"
           : code === "budget_exhausted"
             ? "連線服務的額度已用完；離線辭典仍可使用。"
             : code === "unauthorized" || code === "service_key_missing"
               ? "請在設定中確認翻譯服務通行碼。"
               : "連線分析未完成，請稍後重試。已找到的離線結果仍會保留。",
       );
+      if (
+        code === "dictionary_unavailable" ||
+        (e instanceof DOMException && e.name === "AbortError")
+      )
+        setResult({ query: input, mode: "miss" });
     } finally {
       if (request === requestRef.current) setBusy(false);
     }
@@ -311,7 +358,7 @@ function App() {
       if (text.trim()) await runLookup(text);
       else notify("剪貼簿裡沒有文字。");
     } catch {
-      notify("目前無法讀取剪貼簿，請直接貼到輸入框。");
+      notify("瀏覽器未允許讀取剪貼簿。已選好輸入框，請按 Ctrl+V／⌘V 貼上。");
       inputRef.current?.focus();
     }
   }
@@ -377,6 +424,47 @@ function App() {
       notify(message);
     } catch {
       notify("目前無法複製，請選取文字後手動複製。");
+    }
+  }
+  function saveManual() {
+    if (!manualDraft.trim() || !query.trim()) return;
+    const key = normalize(query);
+    updateSaved([
+      {
+        id: crypto.randomUUID(),
+        query: query.trim(),
+        meaning: manualDraft.trim(),
+        language: profile.source === "auto" ? "自訂" : profile.source,
+        source: "使用者確認的翻譯筆記",
+        createdAt: Date.now(),
+        dueAt: Date.now(),
+        reviews: 0,
+        interval: 0,
+      },
+      ...saved.filter((s) => normalize(s.query) !== key),
+    ]);
+    setModal(null);
+    notify("已保存你確認過的翻譯，可回單字庫複習。");
+  }
+  async function cachePack() {
+    const controller = new AbortController();
+    downloadRef.current = controller;
+    setPackStatus("");
+    try {
+      await downloadOfflinePack(
+        (loaded, total) => setPackProgress({ loaded, total }),
+        controller.signal,
+      );
+      setPackStatus("離線資料已完整備妥，斷網也能查字、看用語與上小課。");
+    } catch (e) {
+      setPackStatus(
+        e instanceof DOMException && e.name === "AbortError"
+          ? "已暫停。已完成的部分會保留，可以稍後再下載。"
+          : "尚未完成下載。請保持網路連線後重試；已完成的資料不會遺失。",
+      );
+    } finally {
+      setPackProgress(null);
+      downloadRef.current = null;
     }
   }
   async function exportData() {
@@ -471,6 +559,7 @@ function App() {
   const sentenceMatch =
     !!term && normalize(result?.query || "") === normalize(term.example);
   const foundPhrase =
+    !result?.analysis &&
     !!term &&
     normalize(result?.query || "") !== normalize(term.term) &&
     !sentenceMatch;
@@ -503,7 +592,7 @@ function App() {
               setView("lookup");
             }}
           >
-            <img src="/icon.svg" />
+            <img src={assetPath("icon.svg")} alt="" />
             <span>
               QuickSense<small>快懂 · 語言小書房</small>
             </span>
@@ -548,10 +637,20 @@ function App() {
           </nav>
           <div className="sidebar-tip">
             <Keyboard size={22} />
-            <strong>一個快捷鍵，就快懂。</strong>
-            <p>複製文字後，隨時叫出快查小窗。</p>
-            <kbd>{shortcutLabel}</kbd>
-            <span>{desktop ? "桌面快捷鍵已啟用" : "桌面版提供全域快捷鍵"}</span>
+            <strong>
+              {desktop ? "一個快捷鍵，就快懂。" : "先貼上，就能快懂。"}
+            </strong>
+            <p>
+              {desktop
+                ? "複製文字後，可用快捷鍵叫出快查小窗。"
+                : "免安裝、免註冊，直接貼上你不懂的文字。"}
+            </p>
+            <kbd>{desktop ? shortcutLabel : "Ctrl / ⌘ + V"}</kbd>
+            <span>
+              {desktop
+                ? "快捷鍵若被占用，可從系統匣開啟快查"
+                : "Ctrl / ⌘ + Enter 查詢"}
+            </span>
           </div>
           <div className="sidebar-bottom">
             <button
@@ -585,7 +684,7 @@ function App() {
             </button>
             {quick ? (
               <>
-                <img className="mini-logo" src="/icon.svg" />
+                <img className="mini-logo" src={assetPath("icon.svg")} alt="" />
                 <strong>QuickSense 快懂</strong>
                 <span className="quiet-label">隨手一查</span>
               </>
@@ -605,7 +704,7 @@ function App() {
                 onClick={() =>
                   desktop
                     ? invoke("open_main")
-                    : window.open(location.origin, "_blank")
+                    : window.open(import.meta.env.BASE_URL, "_blank")
                 }
               >
                 <Maximize2 size={16} />
@@ -616,7 +715,9 @@ function App() {
                   <span />
                   {profile.allowOnline && profile.serviceUrl
                     ? "連線＋離線"
-                    : "離線辭典就緒"}
+                    : isConnected
+                      ? "免費英漢查字"
+                      : "目前離線"}
                 </span>
                 <button
                   className="avatar-button"
@@ -633,6 +734,24 @@ function App() {
           </div>
         </header>
         <main>
+          {!storageOk && (
+            <p className="storage-warning" role="status">
+              瀏覽器目前不允許儲存，仍可繼續使用。關閉前請到「偏好設定」匯出備份，以免遺失學習紀錄。
+            </p>
+          )}
+          {!quick && view === "lookup" && (
+            <div className="capability-strip">
+              <span>
+                <CheckCircle2 size={14} />
+                查字、用語、小課免費
+              </span>
+              <span>整句：開啟 Google 翻譯</span>
+              <button onClick={() => setModal("welcome")}>
+                第一次用？30 秒了解
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
           {!quick && view === "lookup" && (
             <>
               <section className="greeting">
@@ -707,434 +826,530 @@ function App() {
                   </button>
                 </div>
               )}
-              <section className="lookup-panel">
-                <div className="panel-title">
-                  <div>
-                    <span className="square-icon">
-                      <Languages size={17} />
-                    </span>
-                    <h2>遇到不懂的，放進來就好。</h2>
-                  </div>
-                  <span className="keyboard-hint">
-                    <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> + <kbd>Enter</kbd> 查詢
-                  </span>
-                </div>
-                <div className="language-row">
-                  <label>
-                    <Globe2 size={14} />
-                    <select
-                      aria-label="來源語言"
-                      value={profile.source}
-                      onChange={(e) =>
-                        updateProfile({
-                          source: e.target.value as Profile["source"],
-                        })
-                      }
-                    >
-                      <option value="auto">自動辨識語言</option>
-                      {Object.entries(languageNames).map(([id, name]) => (
-                        <option key={id} value={id}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <ArrowRight size={14} />
-                  <label>
-                    <select
-                      aria-label="翻譯成"
-                      value={profile.target}
-                      onChange={(e) =>
-                        updateProfile({ target: e.target.value as Language })
-                      }
-                    >
-                      {Object.entries(languageNames).map(([id, name]) => (
-                        <option key={id} value={id}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} />
-                  </label>
-                  <span className="language-hint">單字、縮寫、句子都可以</span>
-                </div>
-                <textarea
-                  ref={inputRef}
-                  aria-label="查詢文字"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="貼上你剛遇到的外文，例如：Can we circle back on this after lunch?"
-                  maxLength={6000}
-                  rows={quick ? 3 : 2}
-                />
-                <div className="input-bottom">
-                  <button className="paste-button" onClick={paste}>
-                    <ClipboardPaste size={14} />
-                    貼上並快查
-                  </button>
-                  <span className="input-count">{query.length} / 6,000</span>
-                  <button
-                    className="primary-button"
-                    onClick={() => runLookup()}
-                    disabled={busy || !query.trim()}
-                  >
-                    {busy ? (
-                      <LoaderCircle size={15} className="spin" />
-                    ) : (
-                      <Sparkles size={15} />
-                    )}{" "}
-                    {busy ? "正在查詢…" : "快懂一下"}
-                    <ArrowRight size={15} />
-                  </button>
-                </div>
-              </section>
-              {!quick && (
-                <div className="try-row">
-                  <span>隨手試試</span>
-                  {["FYI", "IYKYK", "お疲れ様です", "ㅋㅋ", "vale", "arvo"].map(
-                    (t) => (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          setQuery(t);
-                          void runLookup(t);
-                        }}
-                      >
-                        {t}
-                        <ArrowUpRight size={10} />
-                      </button>
-                    ),
-                  )}
-                </div>
-              )}
-              {result && (
-                <section className="result-panel">
-                  <div className="result-tabs">
-                    <div role="tablist" aria-label="結果分類">
-                      {(
-                        [
-                          { id: "meaning", label: "意思與語氣" },
-                          { id: "grammar", label: "文法拆解" },
-                          { id: "reply", label: "怎麼回更自然" },
-                        ] as const
-                      ).map((t) => (
-                        <button
-                          role="tab"
-                          aria-selected={tab === t.id}
-                          className={tab === t.id ? "active" : ""}
-                          onClick={() => setTab(t.id)}
-                          key={t.id}
+              <div className="lookup-workspace">
+                <div className="lookup-input-column">
+                  <section className="lookup-panel">
+                    <div className="panel-title">
+                      <div>
+                        <span className="square-icon">
+                          <Languages size={17} />
+                        </span>
+                        <h2>遇到不懂的，放進來就好。</h2>
+                      </div>
+                      <span className="keyboard-hint">
+                        <kbd>{isMac ? "⌘" : "Ctrl"}</kbd> + <kbd>Enter</kbd>{" "}
+                        查詢
+                      </span>
+                    </div>
+                    <div className="language-row">
+                      <label>
+                        <Globe2 size={14} />
+                        <select
+                          aria-label="來源語言"
+                          value={profile.source}
+                          onChange={(e) =>
+                            updateProfile({
+                              source: e.target.value as Profile["source"],
+                            })
+                          }
                         >
-                          {t.label}
+                          <option value="auto">自動辨識語言</option>
+                          {Object.entries(languageNames).map(([id, name]) => (
+                            <option key={id} value={id}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <ArrowRight size={14} />
+                      <label>
+                        <select
+                          aria-label="翻譯成"
+                          value={
+                            profile.smartTarget === false
+                              ? profile.target
+                              : "auto"
+                          }
+                          onChange={(e) =>
+                            e.target.value === "auto"
+                              ? updateProfile({ smartTarget: true })
+                              : updateProfile({
+                                  target: e.target.value as Language,
+                                  smartTarget: false,
+                                })
+                          }
+                        >
+                          <option value="auto">
+                            自動 →{" "}
+                            {languageNames[resolveTarget(query, profile)]}
+                          </option>
+                          {Object.entries(languageNames).map(([id, name]) => (
+                            <option key={id} value={id}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={12} />
+                      </label>
+                      <span className="language-hint">
+                        單字、縮寫、句子都可以
+                      </span>
+                    </div>
+                    <textarea
+                      ref={inputRef}
+                      aria-label="查詢文字"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="貼上你剛遇到的外文，例如：Can we circle back on this after lunch?"
+                      maxLength={6000}
+                      rows={quick ? 3 : 2}
+                    />
+                    <div className="input-bottom">
+                      <button className="paste-button" onClick={paste}>
+                        <ClipboardPaste size={14} />
+                        貼上並快查
+                      </button>
+                      <span className="input-count">
+                        {query.length} / 6,000
+                      </span>
+                      <button
+                        className="primary-button"
+                        onClick={() => runLookup()}
+                        disabled={busy || !query.trim()}
+                      >
+                        {busy ? (
+                          <LoaderCircle size={15} className="spin" />
+                        ) : (
+                          <Sparkles size={15} />
+                        )}{" "}
+                        {busy ? "正在查詢…" : "快懂一下"}
+                        <ArrowRight size={15} />
+                      </button>
+                    </div>
+                  </section>
+                  {!quick && (
+                    <div className="try-row">
+                      <span>隨手試試</span>
+                      {[
+                        "deadline",
+                        "serendipity",
+                        "IYKYK",
+                        "お疲れ様です",
+                        "ㅋㅋ",
+                        "arvo",
+                      ].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => {
+                            setQuery(t);
+                            void runLookup(t);
+                          }}
+                        >
+                          {t}
+                          <ArrowUpRight size={10} />
                         </button>
                       ))}
                     </div>
-                    <span
-                      className={`result-source ${result.mode === "online" ? "online" : ""}`}
-                    >
-                      {result.mode === "online" ? (
-                        <Cloud size={12} />
-                      ) : (
-                        <WifiOff size={12} />
-                      )}{" "}
-                      {result.mode === "online"
-                        ? "AI 連線解釋"
-                        : result.mode === "dictionary"
-                          ? "離線英文辭典"
-                          : "離線用語庫"}
-                    </span>
-                  </div>
-                  {result.mode === "miss" ? (
-                    <div className="miss-result">
-                      <span className="empty-avatar">
-                        <PixelAvatar kind={profile.avatar} size={50} />
-                      </span>
-                      <h3>這段內容需要連線解釋。</h3>
-                      <p>
-                        內建辭典適合英文單字與已收錄用語；任意句子的翻譯和文法分析，需要啟用翻譯服務。
-                      </p>
-                      <button
-                        className="primary-button"
-                        onClick={() =>
-                          profile.allowOnline && profile.serviceUrl
-                            ? runLookup(query, true)
-                            : setModal("online")
-                        }
+                  )}
+                </div>
+                {result && (
+                  <section className="result-panel">
+                    <div className="result-tabs">
+                      <div role="tablist" aria-label="結果分類">
+                        {(
+                          [
+                            { id: "meaning", label: "意思與語氣" },
+                            { id: "grammar", label: "文法拆解" },
+                            { id: "reply", label: "怎麼回更自然" },
+                          ] as const
+                        ).map((t) => (
+                          <button
+                            role="tab"
+                            aria-selected={tab === t.id}
+                            className={tab === t.id ? "active" : ""}
+                            onClick={() => setTab(t.id)}
+                            key={t.id}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                      <span
+                        className={`result-source ${result.mode === "online" ? "online" : ""}`}
                       >
-                        <Cloud size={15} />
-                        設定連線翻譯
-                      </button>
+                        {result.mode === "online" ? (
+                          <Cloud size={12} />
+                        ) : (
+                          <WifiOff size={12} />
+                        )}{" "}
+                        {result.mode === "online"
+                          ? "AI 連線解釋"
+                          : result.mode === "dictionary"
+                            ? result.dictionary?.translationZh
+                              ? "英漢詞庫"
+                              : "英文辭典"
+                            : result.mode === "miss"
+                              ? "接著翻譯整句"
+                              : "離線用語庫"}
+                      </span>
                     </div>
-                  ) : (
-                    <>
-                      {tab === "meaning" && (
-                        <div className="meaning-content">
-                          <div className="meaning-main">
-                            <div className="term-label">
-                              <span className="pixel-spark">✦</span>
-                              {result.mode === "dictionary"
-                                ? result.dictionary?.word
-                                : result.mode === "online"
-                                  ? result.analysis?.language
-                                  : term?.region}
-                              {term && (
-                                <span className="tone-chip">{term.tone}</span>
+                    {result.mode === "miss" ? (
+                      <div className="miss-result">
+                        <span className="empty-avatar">
+                          <PixelAvatar kind={profile.avatar} size={50} />
+                        </span>
+                        <FreeTranslation
+                          text={result.query}
+                          source={profile.source}
+                          target={resolveTarget(result.query, profile)}
+                          onCopy={() => void copy(result.query)}
+                          onSave={() => {
+                            setQuery(result.query);
+                            setManualDraft("");
+                            setModal("manual");
+                          }}
+                        />
+                        <button
+                          className="text-button"
+                          disabled={busy}
+                          onClick={() => void runLookup(result.query)}
+                        >
+                          重試離線查字
+                          <RotateCcw size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {tab === "meaning" && (
+                          <div className="meaning-content">
+                            <div className="meaning-main">
+                              <div className="term-label">
+                                <span className="pixel-spark">✦</span>
+                                {result.mode === "dictionary"
+                                  ? result.dictionary?.word
+                                  : result.mode === "online"
+                                    ? result.analysis?.language
+                                    : term?.region}
+                                {term && (
+                                  <span className="tone-chip">{term.tone}</span>
+                                )}
+                              </div>
+                              <h3>
+                                {result.mode === "online"
+                                  ? result.analysis?.translation
+                                  : result.mode === "dictionary"
+                                    ? result.dictionary?.translationZh ||
+                                      result.dictionary?.senses[0]
+                                        ?.definitions[0] ||
+                                      result.dictionary?.word
+                                    : sentenceMatch
+                                      ? term?.translation
+                                      : term?.meaning}
+                              </h3>
+                              {foundPhrase && (
+                                <div className="partial-note">
+                                  辨識到片語「{term?.term}
+                                  」：以下是片語說明，並非整句翻譯。
+                                </div>
                               )}
-                            </div>
-                            <h3>
-                              {result.mode === "online"
-                                ? result.analysis?.translation
-                                : result.mode === "dictionary"
-                                  ? result.dictionary?.senses[0]?.definitions[0]
-                                  : sentenceMatch
-                                    ? term?.translation
-                                    : term?.meaning}
-                            </h3>
-                            {foundPhrase && (
-                              <div className="partial-note">
-                                辨識到片語「{term?.term}
-                                」：以下是片語說明，並非整句翻譯。
-                              </div>
-                            )}
-                            {result.mode === "dictionary" && (
-                              <div className="partial-note">
-                                這是英文辭義；切換目標語言不會自動翻譯離線資料。
-                              </div>
-                            )}
-                            <p className="meaning-note">
-                              {result.analysis?.meaning ||
-                                term?.note ||
-                                result.dictionary?.senses[0]?.examples[0]}
-                            </p>
-                            {result.analysis?.uncertainty && (
-                              <p className="uncertainty">
-                                {result.analysis.uncertainty}
+                              {result.mode === "dictionary" && (
+                                <div className="partial-note">
+                                  {result.dictionary?.translationZh
+                                    ? "這是離線英漢詞義；其他語言或整句可使用免費 Google 翻譯。"
+                                    : "這個詞尚無繁中詞義，先顯示英文辭義；下方可接著免費翻譯。"}
+                                </div>
+                              )}
+                              {result.dictionary?.phonetic && (
+                                <p className="phonetic">
+                                  /{result.dictionary.phonetic}/ ·{" "}
+                                  {result.dictionary.word}
+                                </p>
+                              )}
+                              {result.dictionary?.translationZh &&
+                                result.dictionary.senses[0] && (
+                                  <p className="english-definition">
+                                    {result.dictionary.senses[0].definitions.join(
+                                      "; ",
+                                    )}
+                                  </p>
+                                )}
+                              <p className="meaning-note">
+                                {result.analysis?.meaning ||
+                                  term?.note ||
+                                  result.dictionary?.senses[0]?.examples[0]}
                               </p>
-                            )}
-                            <div className="meaning-actions">
-                              <button
-                                onClick={collect}
-                                className={savedAlready ? "collected" : ""}
-                              >
-                                <Star
-                                  size={14}
-                                  fill={savedAlready ? "currentColor" : "none"}
-                                />
-                                {savedAlready ? "已收藏" : "放進單字庫"}
-                              </button>
-                              <button
-                                onClick={() =>
-                                  speak(
-                                    result.query,
-                                    result.analysis?.language ||
-                                      term?.language ||
-                                      "en",
-                                  )
-                                }
-                              >
-                                <Volume2 size={15} />
-                                聽聽怎麼說
-                              </button>
-                              <button
-                                onClick={() =>
-                                  void copy(
-                                    lookupMeaning(result),
-                                    "意思已複製。",
-                                  )
-                                }
-                              >
-                                <ClipboardPaste size={14} />
-                                複製意思
-                              </button>
-                              {!result.analysis && (
+                              {result.analysis?.uncertainty && (
+                                <p className="uncertainty">
+                                  {result.analysis.uncertainty}
+                                </p>
+                              )}
+                              <div className="meaning-actions">
                                 <button
+                                  onClick={collect}
+                                  className={savedAlready ? "collected" : ""}
+                                >
+                                  <Star
+                                    size={14}
+                                    fill={
+                                      savedAlready ? "currentColor" : "none"
+                                    }
+                                  />
+                                  {savedAlready ? "已收藏" : "放進單字庫"}
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    speak(
+                                      result.query,
+                                      result.analysis?.language ||
+                                        term?.language ||
+                                        "en",
+                                    )
+                                  }
+                                >
+                                  <Volume2 size={15} />
+                                  聽聽怎麼說
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    void copy(
+                                      lookupMeaning(result),
+                                      "意思已複製。",
+                                    )
+                                  }
+                                >
+                                  <ClipboardPaste size={14} />
+                                  複製意思
+                                </button>
+                                {!result.analysis && (
+                                  <button
+                                    disabled={busy}
+                                    onClick={() =>
+                                      desktop &&
+                                      profile.allowOnline &&
+                                      profile.serviceUrl
+                                        ? void runLookup(result.query, true)
+                                        : setModal("online")
+                                    }
+                                  >
+                                    <Cloud size={14} />
+                                    免費翻譯整句
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {term && (
+                              <aside className="usage-card">
+                                <span className="small-overline">
+                                  A LITTLE MORE CONTEXT
+                                </span>
+                                <h4>這句可以這樣用</h4>
+                                <p lang={term.language}>{term.example}</p>
+                                <span>{term.translation}</span>
+                                <div>
+                                  <span className="tiny-leaf">✿</span>{" "}
+                                  {term.language === "en"
+                                    ? "把學到的，放回真實情境。"
+                                    : "留意場合，語氣也要一起懂。"}
+                                </div>
+                              </aside>
+                            )}
+                            {result.dictionary && (
+                              <div className="dictionary-extra">
+                                {result.dictionary.senses
+                                  .slice(1, expanded ? 12 : 3)
+                                  .map((sense, i) => (
+                                    <article key={i}>
+                                      <span>{sense.pos}</span>
+                                      <p>{sense.definitions.join("; ")}</p>
+                                      {sense.synonyms.length > 0 && (
+                                        <small>
+                                          相關詞：{sense.synonyms.join(" · ")}
+                                        </small>
+                                      )}
+                                    </article>
+                                  ))}
+                                {result.dictionary.senses.length > 3 && (
+                                  <button
+                                    className="text-button"
+                                    onClick={() => setExpanded(!expanded)}
+                                  >
+                                    {expanded ? "收起辭義" : "顯示更多辭義"}
+                                    <ChevronDown size={13} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {tab === "grammar" && (
+                          <div className="grammar-content">
+                            {result.analysis?.grammar.map((g, i) => (
+                              <article key={i}>
+                                <span className="small-overline">
+                                  PATTERN {i + 1}
+                                </span>
+                                <h3>{g.pattern}</h3>
+                                <p>{g.explanation}</p>
+                                <blockquote>{g.example}</blockquote>
+                              </article>
+                            ))}
+                            {!result.analysis && term?.grammar ? (
+                              <article>
+                                <span className="small-overline">
+                                  PATTERN NOTE
+                                </span>
+                                <h3>{term.term}</h3>
+                                <p>{term.grammar}</p>
+                                <blockquote>{term.example}</blockquote>
+                              </article>
+                            ) : (
+                              !result.analysis && (
+                                <div className="inline-empty">
+                                  <BookOpen size={24} />
+                                  <p>
+                                    這個詞條尚無逐句文法解析。你可以先看免費文法小課；進階
+                                    AI 解析需自架服務，這裡不會假裝已完成分析。
+                                  </p>
+                                </div>
+                              )
+                            )}
+                            <button
+                              className="outline-button"
+                              onClick={() => startLesson(lessons[0])}
+                            >
+                              <BookOpen size={14} />
+                              看免費文法小課
+                            </button>
+                            {desktop &&
+                              profile.allowOnline &&
+                              profile.serviceUrl && (
+                                <button
+                                  className="text-button"
                                   disabled={busy}
                                   onClick={() =>
                                     profile.allowOnline && profile.serviceUrl
-                                      ? void runLookup(result.query, true)
+                                      ? runLookup(result.query, true)
                                       : setModal("online")
                                   }
                                 >
                                   <Cloud size={14} />
-                                  連線翻譯與解釋
+                                  連線分析完整文法
+                                  <ArrowRight size={13} />
                                 </button>
                               )}
-                            </div>
                           </div>
-                          {term && (
-                            <aside className="usage-card">
-                              <span className="small-overline">
-                                A LITTLE MORE CONTEXT
-                              </span>
-                              <h4>這句可以這樣用</h4>
-                              <p lang={term.language}>{term.example}</p>
-                              <span>{term.translation}</span>
-                              <div>
-                                <span className="tiny-leaf">✿</span>{" "}
-                                {term.language === "en"
-                                  ? "把學到的，放回真實情境。"
-                                  : "留意場合，語氣也要一起懂。"}
-                              </div>
-                            </aside>
-                          )}
-                          {result.dictionary && (
-                            <div className="dictionary-extra">
-                              {result.dictionary.senses
-                                .slice(1, expanded ? 12 : 3)
-                                .map((sense, i) => (
-                                  <article key={i}>
-                                    <span>{sense.pos}</span>
-                                    <p>{sense.definitions.join("; ")}</p>
-                                    {sense.synonyms.length > 0 && (
-                                      <small>
-                                        相關詞：{sense.synonyms.join(" · ")}
-                                      </small>
-                                    )}
-                                  </article>
-                                ))}
-                              {result.dictionary.senses.length > 3 && (
+                        )}
+                        {tab === "reply" && (
+                          <div className="reply-content">
+                            {result.analysis?.alternatives.map((a, i) => (
+                              <article key={i}>
+                                <span className="tone-chip">{a.register}</span>
+                                <h3>{a.text}</h3>
+                                <p>{a.meaning}</p>
                                 <button
                                   className="text-button"
-                                  onClick={() => setExpanded(!expanded)}
+                                  onClick={() =>
+                                    void copy(a.text, "回覆已複製。")
+                                  }
                                 >
-                                  {expanded ? "收起辭義" : "顯示更多辭義"}
-                                  <ChevronDown size={13} />
+                                  複製這句
+                                  <ClipboardPaste size={13} />
                                 </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {tab === "grammar" && (
-                        <div className="grammar-content">
-                          {result.analysis?.grammar.map((g, i) => (
-                            <article key={i}>
-                              <span className="small-overline">
-                                PATTERN {i + 1}
-                              </span>
-                              <h3>{g.pattern}</h3>
-                              <p>{g.explanation}</p>
-                              <blockquote>{g.example}</blockquote>
-                            </article>
-                          ))}
-                          {!result.analysis && term?.grammar ? (
-                            <article>
-                              <span className="small-overline">
-                                PATTERN NOTE
-                              </span>
-                              <h3>{term.term}</h3>
-                              <p>{term.grammar}</p>
-                              <blockquote>{term.example}</blockquote>
-                            </article>
-                          ) : (
-                            !result.analysis && (
-                              <div className="inline-empty">
-                                <BookOpen size={24} />
+                              </article>
+                            ))}
+                            {!result.analysis && term?.reply ? (
+                              <article>
+                                <span className="tone-chip">
+                                  參考回覆 · 請依情境調整
+                                </span>
+                                <h3>{term.reply}</h3>
                                 <p>
-                                  這個詞條沒有完整的句子文法解析。可以先看學習小徑，或連線分析你貼上的完整句子。
+                                  這是針對上方範例寫的回覆，不會自動替你傳送。
                                 </p>
-                              </div>
-                            )
-                          )}
-                          <button
-                            className="text-button"
-                            disabled={busy}
-                            onClick={() =>
-                              profile.allowOnline && profile.serviceUrl
-                                ? runLookup(result.query, true)
-                                : setModal("online")
+                                <button
+                                  className="text-button"
+                                  onClick={() =>
+                                    void copy(term.reply!, "回覆已複製。")
+                                  }
+                                >
+                                  複製這句
+                                  <ClipboardPaste size={13} />
+                                </button>
+                              </article>
+                            ) : (
+                              !result.analysis && (
+                                <div className="inline-empty">
+                                  <MessageIcon />
+                                  <p>
+                                    這個詞條尚無參考回覆。可以到「世界用語」查看已收錄的職場說法，或先用免費翻譯確認你想回的句子。
+                                  </p>
+                                </div>
+                              )
+                            )}
+                            <button
+                              className="text-button"
+                              disabled={busy}
+                              onClick={() =>
+                                profile.allowOnline && profile.serviceUrl
+                                  ? runLookup(result.query, true)
+                                  : setModal("online")
+                              }
+                            >
+                              <Cloud size={14} />
+                              免費翻譯想回的句子
+                              <ArrowRight size={13} />
+                            </button>
+                          </div>
+                        )}
+                        <div className="result-foot">
+                          <span>
+                            <ShieldCheck size={12} />
+                            {result.mode === "online"
+                              ? "AI 解釋可能有誤，重要內容請再確認。"
+                              : term
+                                ? `用語筆記 · 整理日期 ${term.checked}`
+                                : result.dictionary?.translationZh
+                                  ? "ECDICT · MIT / WordNet · CC BY 4.0"
+                                  : "Open English WordNet 2025 · CC BY 4.0"}
+                          </span>
+                          <a
+                            href={
+                              term?.source ||
+                              (result.dictionary?.translationZh
+                                ? "https://github.com/skywind3000/ECDICT"
+                                : "https://en-word.net/")
                             }
+                            target="_blank"
+                            rel="noreferrer"
                           >
-                            <Cloud size={14} />
-                            連線分析完整文法
-                            <ArrowRight size={13} />
-                          </button>
+                            參考來源
+                            <ExternalLink size={11} />
+                          </a>
                         </div>
-                      )}
-                      {tab === "reply" && (
-                        <div className="reply-content">
-                          {result.analysis?.alternatives.map((a, i) => (
-                            <article key={i}>
-                              <span className="tone-chip">{a.register}</span>
-                              <h3>{a.text}</h3>
-                              <p>{a.meaning}</p>
-                              <button
-                                className="text-button"
-                                onClick={() =>
-                                  void copy(a.text, "回覆已複製。")
-                                }
-                              >
-                                複製這句
-                                <ClipboardPaste size={13} />
-                              </button>
-                            </article>
-                          ))}
-                          {!result.analysis && term?.reply ? (
-                            <article>
-                              <span className="tone-chip">
-                                參考回覆 · 請依情境調整
-                              </span>
-                              <h3>{term.reply}</h3>
-                              <p>
-                                這是針對上方範例寫的回覆，不會自動替你傳送。
-                              </p>
-                              <button
-                                className="text-button"
-                                onClick={() =>
-                                  void copy(term.reply!, "回覆已複製。")
-                                }
-                              >
-                                複製這句
-                                <ClipboardPaste size={13} />
-                              </button>
-                            </article>
-                          ) : (
-                            !result.analysis && (
-                              <div className="inline-empty">
-                                <MessageIcon />
-                                <p>
-                                  這個詞條尚未提供回覆範例。連線後可依你貼上的句子，生成適合的說法。
-                                </p>
-                              </div>
-                            )
-                          )}
-                          <button
-                            className="text-button"
-                            disabled={busy}
-                            onClick={() =>
-                              profile.allowOnline && profile.serviceUrl
-                                ? runLookup(result.query, true)
-                                : setModal("online")
-                            }
-                          >
-                            <Cloud size={14} />
-                            連線產生回覆建議
-                            <ArrowRight size={13} />
-                          </button>
-                        </div>
-                      )}
-                      <div className="result-foot">
-                        <span>
-                          <ShieldCheck size={12} />
-                          {result.mode === "online"
-                            ? "AI 解釋可能有誤，重要內容請再確認。"
-                            : term
-                              ? `用語筆記 · 整理日期 ${term.checked}`
-                              : "Open English WordNet 2025 · CC BY 4.0"}
-                        </span>
-                        <a
-                          href={term?.source || "https://en-word.net/"}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          參考來源
-                          <ExternalLink size={11} />
-                        </a>
-                      </div>
-                    </>
-                  )}
-                </section>
-              )}
+                      </>
+                    )}
+                  </section>
+                )}
+                {!result && busy && (
+                  <div className="lookup-welcome" role="status">
+                    <LoaderCircle className="spin" size={25} />
+                    <h3>正在載入詞庫…</h3>
+                    <p>
+                      第一次查詢會下載對應字首的資料。文字已保留，稍候就好。
+                    </p>
+                  </div>
+                )}
+                {!result && !busy && (
+                  <div className="lookup-welcome">
+                    <PixelAvatar kind={profile.avatar} size={45} />
+                    <h3>先試一個字，就知道怎麼用。</h3>
+                    <p>
+                      貼上文字，或按左邊的範例。單字先查繁中詞義；整句會提供免費翻譯入口。
+                    </p>
+                    <span>不需要帳號，也不用填金鑰。</span>
+                  </div>
+                )}
+              </div>
               {!quick && (
                 <div className="bottom-grid">
                   <section className="daily-lesson">
@@ -1666,88 +1881,105 @@ function App() {
                     : "目前是瀏覽器預覽。全域快捷鍵、常駐選單與系統憑證儲存只在桌面版提供。"}
                 </p>
               </section>
-              <section className="settings-box">
-                <h2>
-                  <Cloud size={18} />
-                  連線翻譯與文法
-                </h2>
-                <p>
-                  開啟後，僅將你主動查詢的文字送到設定的翻譯服務；服務端再向 AI
-                  供應商請求分析。離線查詢仍然優先。
-                </p>
-                <label className="field-label">
-                  服務網址
-                  <input
-                    placeholder="https://your-quicksense-service.workers.dev"
-                    value={profile.serviceUrl}
-                    onChange={(e) =>
-                      updateProfile({
-                        serviceUrl: e.target.value,
-                        allowOnline: false,
-                      })
-                    }
-                  />
-                </label>
-                <label className="field-label">
-                  服務通行碼
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    value={serviceKey}
-                    onChange={(e) => setServiceKey(e.target.value)}
-                    placeholder={
-                      desktop
-                        ? "儲存在 Windows／macOS 系統憑證庫"
-                        : "瀏覽器預覽只保留在目前分頁工作階段"
-                    }
-                  />
-                </label>
-                <button
-                  className="outline-button"
-                  onClick={async () => {
-                    try {
-                      validateServiceUrl(profile.serviceUrl);
-                      if (serviceKey) await saveServiceKey(serviceKey);
-                      else if (desktop) {
-                        const has = await invoke<boolean>("has_service_key");
-                        if (!has) {
+              {desktop && (
+                <details className="settings-box advanced-ai">
+                  <summary>進階：自架 AI（選用，可能產生費用）</summary>
+                  <h2>
+                    <Cloud size={18} />
+                    自己的 AI 服務
+                  </h2>
+                  <p>
+                    開啟後，僅將你主動查詢的文字送到設定的翻譯服務；服務端再向
+                    AI 供應商請求分析。離線查詢仍然優先。
+                  </p>
+                  <label className="field-label">
+                    服務網址
+                    <input
+                      placeholder="https://your-quicksense-service.workers.dev"
+                      value={profile.serviceUrl}
+                      onChange={(e) =>
+                        updateProfile({
+                          serviceUrl: e.target.value,
+                          allowOnline: false,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="field-label">
+                    服務通行碼
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={serviceKey}
+                      onChange={(e) => setServiceKey(e.target.value)}
+                      placeholder={
+                        desktop
+                          ? "儲存在 Windows／macOS 系統憑證庫"
+                          : "瀏覽器預覽只保留在目前分頁工作階段"
+                      }
+                    />
+                  </label>
+                  <button
+                    className="outline-button"
+                    onClick={async () => {
+                      try {
+                        validateServiceUrl(profile.serviceUrl);
+                        if (serviceKey) await saveServiceKey(serviceKey);
+                        else if (desktop) {
+                          const has = await invoke<boolean>("has_service_key");
+                          if (!has) {
+                            notify("請先填入服務通行碼。");
+                            return;
+                          }
+                        } else if (
+                          !sessionStorage.getItem("quicksense.serviceKey")
+                        ) {
                           notify("請先填入服務通行碼。");
                           return;
                         }
-                      } else if (
-                        !sessionStorage.getItem("quicksense.serviceKey")
-                      ) {
-                        notify("請先填入服務通行碼。");
-                        return;
+                        setServiceKey("");
+                        setModal("ai");
+                      } catch {
+                        notify("請使用 HTTPS 服務網址，並確認系統憑證庫可用。");
                       }
-                      setServiceKey("");
-                      setModal("online");
-                    } catch {
-                      notify("請使用 HTTPS 服務網址，並確認系統憑證庫可用。");
-                    }
-                  }}
-                >
-                  儲存並設定連線
-                  <ArrowRight size={14} />
-                </button>
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={profile.allowOnline}
-                    onChange={(e) =>
-                      e.target.checked
-                        ? setModal("online")
-                        : updateProfile({ allowOnline: false })
-                    }
-                  />
-                  找不到離線結果時，自動使用連線服務
-                </label>
-              </section>
+                    }}
+                  >
+                    儲存並設定連線
+                    <ArrowRight size={14} />
+                  </button>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={profile.allowOnline}
+                      onChange={(e) =>
+                        e.target.checked
+                          ? setModal("ai")
+                          : updateProfile({ allowOnline: false })
+                      }
+                    />
+                    找不到離線結果時，自動使用連線服務
+                  </label>
+                </details>
+              )}
               <section className="settings-box">
                 <h2>
                   <BookOpen size={18} />
                   離線資料包
                 </h2>
+                <div className="pack-row">
+                  <span className="pack-icon">中</span>
+                  <div>
+                    <strong>ECDICT 英漢詞義 · 繁中</strong>
+                    <p>
+                      {chineseManifest
+                        ? `${chineseManifest.entries.toLocaleString()} 個詞條 · ${chineseManifest.lookupForms.toLocaleString()} 個查詢形式 · ${(chineseManifest.bytes / 1048576).toFixed(1)} MiB`
+                        : "正在讀取英漢資料資訊…"}
+                    </p>
+                  </div>
+                  <span className="pack-installed">
+                    {desktop ? "已內建" : "按需載入"}
+                  </span>
+                </div>
                 <div className="pack-row">
                   <span className="pack-icon">EN</span>
                   <div>
@@ -1760,9 +1992,60 @@ function App() {
                   </div>
                   <span className="pack-installed">
                     <Check size={13} />
-                    已內建
+                    {desktop ? "已內建" : "按需載入"}
                   </span>
                 </div>
+                {!desktop && (
+                  <div className="offline-download">
+                    <p>
+                      已查過的字會快取。若希望整個詞庫斷網可用，先在連線時下載完整離線包（約{" "}
+                      {manifest && chineseManifest
+                        ? (
+                            (manifest.bytes + chineseManifest.bytes) /
+                            1048576
+                          ).toFixed(1)
+                        : "53"}{" "}
+                      MiB，另含介面）。
+                    </p>
+                    {packProgress ? (
+                      <>
+                        <progress
+                          aria-label="離線下載進度"
+                          value={packProgress.loaded}
+                          max={packProgress.total}
+                        />
+                        <span>
+                          {packProgress.loaded} / {packProgress.total} 個檔案
+                        </span>
+                        <button
+                          className="outline-button"
+                          onClick={() => downloadRef.current?.abort()}
+                        >
+                          暫停下載
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className="outline-button"
+                        disabled={!offlineReady || !isConnected}
+                        onClick={() => void cachePack()}
+                      >
+                        <Download size={14} />
+                        下載完整離線包
+                      </button>
+                    )}
+                    <p className="help-note">
+                      {packStatus ||
+                        (!isConnected
+                          ? "你目前離線；已快取內容仍可使用。"
+                          : offlineReady
+                            ? "離線快取已就緒。"
+                            : import.meta.env.DEV
+                              ? "開發預覽不安裝快取；發布版可下載。"
+                              : "正在準備離線快取；若瀏覽器不支援，仍可連線使用。")}
+                    </p>
+                  </div>
+                )}
                 <div className="pack-row">
                   <span className="pack-icon peach">世</span>
                   <div>
@@ -1916,7 +2199,92 @@ function App() {
               </button>
             </>
           )}
+          {modal === "welcome" && (
+            <>
+              <PixelAvatar kind={profile.avatar} size={58} />
+              <span className="soft-tag">免費 · 免註冊 · 免金鑰</span>
+              <h2>先看懂一個字，就上手。</h2>
+              <ol className="welcome-steps">
+                <li>
+                  <strong>貼上或輸入</strong>
+                  <span>英文單字、各國用語都可以。</span>
+                </li>
+                <li>
+                  <strong>直接看繁中意思</strong>
+                  <span>整句或其他語言，按鈕會開啟免費 Google 翻譯。</span>
+                </li>
+                <li>
+                  <strong>存起來，再學一點</strong>
+                  <span>
+                    收藏與小課紀錄只保存在這個瀏覽器。名字可稍後再改。
+                  </span>
+                </li>
+              </ol>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  updateProfile({ onboarded: true });
+                  setModal(null);
+                  setQuery("deadline");
+                  void runLookup("deadline");
+                }}
+              >
+                先試一次：deadline
+                <ArrowRight size={15} />
+              </button>
+              <button
+                className="text-button"
+                onClick={() => {
+                  updateProfile({ onboarded: true });
+                  setModal(null);
+                  inputRef.current?.focus();
+                }}
+              >
+                直接貼上自己的文字
+              </button>
+            </>
+          )}
+          {modal === "manual" && (
+            <>
+              <BookMarked size={28} />
+              <h2>留下你確認過的翻譯</h2>
+              <p className="manual-original">{query}</p>
+              <label className="field-label">
+                翻譯或自己的筆記
+                <textarea
+                  aria-label="翻譯筆記"
+                  rows={5}
+                  maxLength={12000}
+                  value={manualDraft}
+                  onChange={(e) => setManualDraft(e.target.value)}
+                />
+              </label>
+              <p className="help-note">
+                標示為你的翻譯筆記，不會冒充 AI 或辭典的結果。
+              </p>
+              <button
+                className="primary-button"
+                disabled={!manualDraft.trim()}
+                onClick={saveManual}
+              >
+                存進單字庫
+                <Star size={15} />
+              </button>
+            </>
+          )}
           {modal === "online" && (
+            <FreeTranslation
+              text={query}
+              source={profile.source}
+              target={resolveTarget(query, profile)}
+              onCopy={() => void copy(query)}
+              onSave={() => {
+                setManualDraft("");
+                setModal("manual");
+              }}
+            />
+          )}
+          {modal === "ai" && desktop && (
             <>
               <Cloud size={30} />
               <h2>把需要的內容，交給連線服務。</h2>

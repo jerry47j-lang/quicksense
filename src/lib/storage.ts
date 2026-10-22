@@ -1,8 +1,9 @@
 import type { Profile, SavedItem } from "../types";
 export const defaultProfile: Profile = {
-  name: "Jerry",
+  name: "新朋友",
   avatar: "sprout",
   target: "zh-TW",
+  smartTarget: true,
   source: "auto",
   mode: "work",
   serviceUrl: "",
@@ -14,9 +15,39 @@ export const defaultProfile: Profile = {
 const PROFILE = "quicksense.profile.v1",
   SAVED = "quicksense.saved.v1",
   HISTORY = "quicksense.history.v1";
+const temporary = new Map<string, string>();
+if (typeof window !== "undefined")
+  window.addEventListener("storage", (e) => {
+    if (e.key) temporary.delete(e.key);
+    else temporary.clear();
+  });
+export function storageAvailable() {
+  try {
+    localStorage.setItem("quicksense.storage-probe", "1");
+    localStorage.removeItem("quicksense.storage-probe");
+    return true;
+  } catch {
+    return false;
+  }
+}
+function persist(key: string, value: unknown) {
+  const text = JSON.stringify(value);
+  temporary.set(key, text);
+  try {
+    localStorage.setItem(key, text);
+  } catch {
+    if (typeof window !== "undefined")
+      window.dispatchEvent(new Event("quicksense-storage-unavailable"));
+  }
+  if (typeof window !== "undefined")
+    window.dispatchEvent(new Event("quicksense-storage"));
+}
 function read<T>(key: string, fallback: T): T {
   try {
-    return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
+    return (
+      JSON.parse(temporary.get(key) || localStorage.getItem(key) || "null") ??
+      fallback
+    );
   } catch {
     return fallback;
   }
@@ -29,6 +60,10 @@ export function loadProfile(): Profile {
   return {
     ...defaultProfile,
     ...p,
+    smartTarget:
+      typeof p.smartTarget === "boolean"
+        ? p.smartTarget
+        : !p.target || p.target === "zh-TW",
     name:
       typeof p.name === "string" ? p.name.slice(0, 24) : defaultProfile.name,
     completedLessons: Array.isArray(p.completedLessons)
@@ -43,8 +78,7 @@ export function loadProfile(): Profile {
   };
 }
 export function saveProfile(profile: Profile) {
-  localStorage.setItem(PROFILE, JSON.stringify(profile));
-  window.dispatchEvent(new Event("quicksense-storage"));
+  persist(PROFILE, profile);
 }
 export function loadSaved(): SavedItem[] {
   const value = read<unknown>(SAVED, []);
@@ -57,8 +91,7 @@ export function loadSaved(): SavedItem[] {
   );
 }
 export function saveItems(items: SavedItem[]) {
-  localStorage.setItem(SAVED, JSON.stringify(items));
-  window.dispatchEvent(new Event("quicksense-storage"));
+  persist(SAVED, items);
 }
 export function loadHistory(): string[] {
   const value = read<unknown>(HISTORY, []);
@@ -71,7 +104,7 @@ export function addHistory(query: string) {
     0,
     12,
   );
-  localStorage.setItem(HISTORY, JSON.stringify(list));
+  persist(HISTORY, list);
   return list;
 }
 export function scheduleReview(
@@ -156,6 +189,10 @@ export function parseBackup(input: unknown): {
         ? p.avatar!
         : "sprout",
       target: p.target!,
+      smartTarget:
+        typeof p.smartTarget === "boolean"
+          ? p.smartTarget
+          : p.target === "zh-TW",
       completedLessons: Array.isArray(p.completedLessons)
         ? p.completedLessons.filter((x) => typeof x === "string")
         : [],

@@ -1,0 +1,11 @@
+{
+  "name": "ECDICT Traditional Chinese companion",
+  "source": "https://raw.githubusercontent.com/skywind3000/ECDICT/bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b/ecdict.csv",
+  "revision": "bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b",
+  "license": "MIT",
+  "entries": 140390,
+  "lookupForms": 177494,
+  "bytes": 20165155,
+  "sourceSha256": "1a6947e04785db63613a92e14903cdae7954f7e84860b10e68e5c7cbb3f9c3cf",
+  "modifications": "Retained WordNet matches, frequency-ranked and tagged vocabulary; converted Simplified Chinese to Taiwan Traditional Chinese with OpenCC; included documented inflected forms. Historical dictionary data, not a current slang feed."
+}

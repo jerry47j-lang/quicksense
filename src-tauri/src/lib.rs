@@ -26,7 +26,7 @@ fn write_clipboard(app:tauri::AppHandle,text:String)->Result<(),String>{
 #[tauri::command]
 fn open_reference(app:tauri::AppHandle,url:String)->Result<(),String>{
  let parsed=url::Url::parse(&url).map_err(|_|"invalid_reference")?;
- if parsed.scheme()!="https"||!parsed.username().is_empty()||parsed.password().is_some()||!matches!(parsed.host_str(),Some("github.com"|"en.wiktionary.org"|"en-word.net"|"creativecommons.org")){return Err("invalid_reference".into());}
+ if parsed.scheme()!="https"||!parsed.username().is_empty()||parsed.password().is_some()||!matches!(parsed.host_str(),Some("github.com"|"en.wiktionary.org"|"en-word.net"|"creativecommons.org"|"translate.google.com"|"jerry47j-lang.github.io")){return Err("invalid_reference".into());}
  app.opener().open_url(url,None::<&str>).map_err(|_|"open_failed".into())
 }
 #[tauri::command]
@@ -45,7 +45,7 @@ async fn export_backup(app:tauri::AppHandle,data:String)->Result<bool,String>{
 #[tauri::command]
 fn take_pending_query(state:State<'_,Pending>)->Option<String>{state.0.lock().ok().and_then(|mut v|v.take())}
 #[tauri::command]
-fn open_main(app:tauri::AppHandle){show_main(&app);}
+fn open_main(app:tauri::AppHandle){if let Some(w)=app.get_webview_window("quick"){let _=w.hide();}show_main(&app);}
 #[tauri::command]
 fn hide_quick(app:tauri::AppHandle){if let Some(w)=app.get_webview_window("quick"){let _=w.hide();}}
 fn credential()->Result<keyring::Entry,String>{keyring::Entry::new("com.jerry.quicksense","translation-service").map_err(|_|"credential_store_unavailable".into())}

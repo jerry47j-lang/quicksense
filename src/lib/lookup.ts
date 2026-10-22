@@ -1,5 +1,12 @@
 import { terms } from "../data/terms";
-import type { DictionaryEntry, Language, LookupResult, Term } from "../types";
+import type {
+  BilingualEntry,
+  DictionaryEntry,
+  Language,
+  LookupResult,
+  Term,
+} from "../types";
+import { assetPath } from "./assets";
 export const languageNames: Record<Language, string> = {
   "zh-TW": "繁體中文",
   en: "English",
@@ -55,13 +62,37 @@ export function findTerm(
     .sort((a, b) => b.term.length - a.term.length)[0];
 }
 const chunks = new Map<string, Record<string, DictionaryEntry>>();
+async function fetchDictionary(path: string) {
+  const controller = new AbortController(),
+    timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const r = await fetch(assetPath(path), { signal: controller.signal });
+    if (!r.ok) throw Error("dictionary_unavailable");
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 async function chunk(letter: string) {
   if (chunks.has(letter)) return chunks.get(letter)!;
-  const r = await fetch(`/dictionary/en/${letter}.json`);
-  if (!r.ok) throw Error("dictionary_unavailable");
-  const data = (await r.json()) as Record<string, DictionaryEntry>;
+  const data = (await fetchDictionary(
+    `dictionary/en/${letter}.json`,
+  )) as Record<string, DictionaryEntry>;
   chunks.set(letter, data);
   return data;
+}
+const bilingualChunks = new Map<string, Record<string, BilingualEntry>>();
+async function bilingualChunk(letter: string) {
+  if (bilingualChunks.has(letter)) return bilingualChunks.get(letter)!;
+  const data = (await fetchDictionary(
+    `dictionary/zh-TW/${letter}.json`,
+  )) as Record<string, BilingualEntry>;
+  bilingualChunks.set(letter, data);
+  return data;
+}
+export function clearLookupCache() {
+  chunks.clear();
+  bilingualChunks.clear();
 }
 export async function lookupLocal(
   query: string,
@@ -74,7 +105,8 @@ export async function lookupLocal(
     q.length > 100 ||
     !q ||
     !["auto", "en"].includes(source) ||
-    !/^[\p{L}\p{N}\s'\-]+$/u.test(q)
+    !/^[\p{L}\p{N}\s'\-]+$/u.test(q) ||
+    q.split(/\s+/).length > 5
   )
     return { query, mode: "miss" };
   const letter = /^[a-z]/.test(q) ? q[0] : "_";
@@ -85,10 +117,30 @@ export async function lookupLocal(
     ...(q.endsWith("ing") ? [q.slice(0, -3), `${q.slice(0, -3)}e`] : []),
     ...(q.endsWith("ed") ? [q.slice(0, -2), q.slice(0, -1)] : []),
   ];
-  const data = await chunk(letter);
+  const [en, zh] = await Promise.allSettled([
+    chunk(letter),
+    bilingualChunk(letter),
+  ]);
+  if (en.status === "rejected" && zh.status === "rejected")
+    throw Error("dictionary_unavailable");
+  const data = en.status === "fulfilled" ? en.value : Object.create(null);
+  const chinese = zh.status === "fulfilled" ? zh.value : Object.create(null);
   for (const c of candidates) {
-    if (Object.hasOwn(data, c))
-      return { query, dictionary: data[c], mode: "dictionary" };
+    const bilingual =
+      Object.hasOwn(chinese, c) && typeof chinese[c]?.translationZh === "string"
+        ? chinese[c]
+        : undefined;
+    if (Object.hasOwn(data, c) || bilingual)
+      return {
+        query,
+        dictionary: {
+          ...(Object.hasOwn(data, c)
+            ? data[c]
+            : { word: bilingual!.word, senses: [] }),
+          ...bilingual,
+        },
+        mode: "dictionary",
+      };
   }
   return { query, mode: "miss" };
 }
@@ -98,6 +150,7 @@ export function lookupMeaning(result: LookupResult) {
     (result.term && normalize(result.query) === normalize(result.term.example)
       ? result.term.translation
       : result.term?.meaning) ||
+    result.dictionary?.translationZh ||
     result.dictionary?.senses[0]?.definitions[0] ||
     ""
   );
