@@ -2,49 +2,59 @@
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-**빠르게 이해하고, 매일 조금씩 배우세요. Windows와 macOS용 작은 언어 공부방입니다.**
+**빠르게 이해하고, 매일 조금씩 배우세요.**
 
-[데스크톱 미리 보기 다운로드](https://github.com/jerry47j-lang/quicksense/releases) · [검증 기록](docs/VALIDATION.md)
+[무료 앱 열기](https://jerry47j-lang.github.io/quicksense/) · [데스크톱 개발 미리 보기](https://github.com/jerry47j-lang/quicksense/releases) · [검증 기록](docs/VALIDATION.md)
 
-[처음 사용하는 방법](docs/GETTING_STARTED.md#한국어)
+Windows와 macOS 브라우저에서 설치·계정·API 키·유료 백엔드 없이 시작합니다. 현재 UI와 학습 설명은 번체 중국어입니다. 네 언어 README는 UI 전체 현지화를 뜻하지 않습니다.
 
-![QuickSense 인터페이스, 현재 번체 중국어](docs/images/desktop-preview.png)
+![실제 공개 앱](docs/images/free-web-app.png)
 
-텍스트를 복사한 뒤 Windows에서는 **Ctrl+Shift+Space**, Mac에서는 **Cmd+Shift+Space**를 누르면 작은 검색 창이 열립니다. 이름과 픽셀 캐릭터를 고르고 실제로 만난 표현을 모아 학습할 수 있습니다.
+## 첫 1분
 
-## 기능
+1. **先試一次：deadline**을 눌러 중국어 뜻을 보세요. 이름은 나중에 정해도 됩니다.
+2. **查詢文字**에 단어나 문장을 붙여 넣고 **快懂一下**를 누르세요. 중국어 입력은 영어, 다른 입력은 번체 중국어가 기본 대상이며 직접 바꿀 수 있습니다.
+3. 임의 문장은 **在 Google 翻譯開啟**를 누르면 입력과 선택 언어를 담은 공식 Google 번역이 새 탭에서 열립니다. 원문은 유지됩니다. 내장 무료 AI나 비공식 API가 아닌 외부 사이트 연결입니다. 클릭할 때만 Google에 전달되므로 허가 없는 기밀을 보내지 마세요.
+4. 단어를 저장하거나 **把確認過的翻譯存回來**에서 확인한 번역을 붙여 넣으세요. **我的單字庫**에서 복습하고 **學習小徑**에서 학습합니다.
 
-- Open English WordNet 2025 기반 오프라인 영어 사전: 127,311개 표제어, 182,055개 보존 의미, 약 32.9 MiB. 영어 뜻풀이이며 오프라인 다국어 번역 모델은 아닙니다.
-- 여러 지역의 직장 표현, 약어, 일상어, 인터넷 표현을 담은 시작용 자료. 번체 중국어 설명, 어감, 지역, 독자적으로 작성한 예문과 참고 링크를 제공합니다.
-- 뜻·어감, 문법 메모, 답장 예시. 부분 표현 검색과 전체 문장 번역을 명확히 구분합니다.
-- 이름과 세 가지 픽셀 캐릭터, 단어 저장, 간격 복습, JSON 백업·병합 가져오기, A1–B1 직장 영어 수업 8개.
-- 트레이/메뉴 막대와 빠른 검색 창. 사용자가 단축키나 붙여넣기 버튼을 사용할 때만 클립보드를 읽습니다.
-- 선택 사항인 자체 호스팅 AI 서비스: 전체 문장 번역, 문법, 답장 제안, 인증 및 월간 예산 예약 제한.
+붙여넣기 권한이 없으면 Ctrl+V / Cmd+V를 사용하세요. 로딩 실패 시 입력을 유지하며 재시도와 외부 번역을 제공합니다. 결제를 요구하지 않습니다.
 
-## 현재 제한
+## 무료 기능과 제한
 
-주요 UI와 오프라인 학습 자료는 현재 번체 중국어입니다. 온라인 서비스는 12가지 원문/번역 언어 선택을 지원합니다. 표현 자료는 전 세계 최신 유행어 전체 목록이 아니며 사전은 2025 버전으로 고정되어 있습니다.
+- ECDICT 영중 사전 **140,390 표제어 / 177,494 검색 형태, 19.2 MiB**. WordNet 2025 영어 사전 **127,311 표제어, 32.9 MiB**. 첫 글자별로 로드하며 **偏好設定**에서 전체 오프라인 자료 약 **52.1 MiB**를 저장합니다. 첫 접속/다운로드는 온라인이어야 하고 브라우저가 캐시를 지울 수 있습니다. 네이티브 패키지는 사전을 포함합니다.
+- 여러 나라의 지역 표현 **62개**, 어감·자체 예문·출처. 역사적 사전과 입문 자료이며 모든 최신 유행어의 실시간 목록은 아닙니다.
+- A1–B1 직장 영어 순차 수업 8개, 로컬 저장·간격 복습·JSON 백업/가져오기, 이름과 픽셀 캐릭터. 계정 동기화는 없습니다. 기기/주소 변경이나 데이터 삭제 전에 백업하세요.
+- 지원 브라우저의 PWA 설치. 네이티브 트레이·전역 단축키는 포함하지 않습니다.
 
-온라인 분석은 별도 서비스 설정이 필요합니다. 공급업체 API 키는 앱에 포함하지 않습니다. Windows와 Mac 빌드는 GitHub Actions에서 각각 수행하며 빌드 통과는 실제 기기 UI 검증을 뜻하지 않습니다. Mac 앱은 임시 서명만 적용하며 Apple 공증은 받지 않았습니다. OS 보안 경고를 우회하지 마세요.
+대상 선택은 외부 번역에 적용되며 기존 중국어 메모는 바꾸지 않습니다. 임의 문장의 문법 교정과 AI 답장 생성은 무료 오프라인 엔진에 없습니다. 공개 앱은 서비스 비밀번호를 받거나 유료 서비스를 호출하지 않습니다. 고급 네이티브 사용자는 [선택 AI 서비스](docs/TRANSLATION_SERVICE.md)를 배포할 수 있지만 키와 비용이 필요할 수 있습니다.
 
-## 개발 및 배포
+## 데스크톱 상태
 
-Node.js 22.12+가 필요합니다. 네이티브 빌드에는 Rust 1.90+와 [Tauri 사전 준비](https://v2.tauri.app/start/prerequisites/)가 추가로 필요합니다.
+Windows x64, Mac Apple Silicon, Mac Intel은 개발 미리 보기입니다. CI 빌드와 실제 기기 단축키·트레이·키 저장소 검증은 별개이며 후자는 미완료입니다. Windows 서명과 Apple 공증이 미완료라 차단될 수 있습니다. OS 보호를 유지하고 무료 웹 앱을 쓰세요.
+
+## 개발과 배포
+
+Node.js 22.12+가 필요하며 네이티브는 Rust 1.90+와 [Tauri 환경](https://v2.tauri.app/start/prerequisites/)도 필요합니다.
 
 ```sh
 npm ci
 npm run check
 npm run dev
+npm run build
+node scripts/verify-dist.mjs
+node scripts/verify-offline.mjs
 npm run desktop
 npm run desktop:build
 ```
 
-`dev`는 브라우저 미리보기이며 `desktop`은 실제 데스크톱 셸을 실행합니다. 사전은 포함되어 있습니다. `npm run dictionary:build`로 공식 데이터를 다시 받아 변환할 수 있으며 원본 SHA-256은 manifest에 기록됩니다.
+Pages 소스를 GitHub Actions로 선택하고 '.github/workflows/pages.yml'로 배포합니다. 저장소 이름이 다르면 'vite.config.ts'의 base를 바꾸세요. 사전은 포함되어 있고 재생성은 'npm run dictionary:build', 'npm run dictionary:bilingual'입니다. 무료 공개 Pages에도 [사용량 제한](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)이 있으며 Google 가용성은 본 프로젝트가 제어하지 않습니다.
 
-[서비스 설정 안내](docs/TRANSLATION_SERVICE.md)에 따라 D1 예산 DB와 서버 비밀 값 `OPENAI_API_KEY`, `SERVICE_ACCESS_KEY`를 설정하세요. 앱 환경설정에서 서비스 주소와 접근 키를 입력하고 전송 설명을 확인한 뒤 켭니다. 데스크톱 접근 키는 OS 자격 증명 저장소에, 브라우저 미리보기에서는 현재 세션에만 보관합니다.
+## 전 과정에서 Codex 사용
 
-## Codex 제작 과정과 기여
+Jerry가 방향을 정하고 결과를 검토하며 Codex와 조사·인터랙션 디자인·개발·테스트·문서를 진행합니다. [BUILD_LOG](docs/BUILD_LOG.md), [VALIDATION](docs/VALIDATION.md)에 근거와 남은 검증을 기록합니다. 하지 않은 초보자/실기기 테스트를 완료했다고 주장하지 않습니다.
 
-Jerry가 방향을 정하고 결과를 검토하며, 조사·디자인·구현·테스트·문서 전 과정에 Codex를 활용합니다. [개발 기록](docs/BUILD_LOG.md)과 [검증 상태](docs/VALIDATION.md)를 확인하세요.
+## 도움과 라이선스
 
-표현을 추가할 때 언어/지역, 격식, 참고 출처, 독자적인 예문과 작성 날짜를 포함하세요. [문제 보고](https://github.com/jerry47j-lang/quicksense/issues/new/choose). 코드는 MIT, 사전은 CC BY 4.0과 원 Princeton WordNet 약관을 따릅니다. [출처 및 라이선스](THIRD_PARTY_NOTICES.md). 개인 학습 자료는 저장소에 커밋하지 않습니다.
+[문제 해결](docs/GETTING_STARTED.md) · [FAQ 및 개인정보](docs/FAQ_PRIVACY.md) · [문제 신고](https://github.com/jerry47j-lang/quicksense/issues/new/choose). 버전·브라우저·재현 절차를 쓰고 기밀은 빼주세요. 지역 기여에는 지역·어감·출처·날짜가 있는 자체 예문이 필요합니다.
+
+코드 MIT, ECDICT MIT, WordNet CC BY 4.0 및 Princeton 조건. [고지](THIRD_PARTY_NOTICES.md)를 확인하세요. 개인 검색은 커밋하지 않습니다.

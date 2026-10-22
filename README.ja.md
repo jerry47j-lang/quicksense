@@ -2,49 +2,59 @@
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-**すぐに意味がわかり、毎日少しずつ学べる。Windows と macOS の小さな語学書斎です。**
+**すぐ理解して、毎日少しずつ学ぶ。**
 
-[デスクトッププレビューをダウンロード](https://github.com/jerry47j-lang/quicksense/releases) · [検証記録](docs/VALIDATION.md)
+[無料アプリを開く](https://jerry47j-lang.github.io/quicksense/) · [デスクトップ開発プレビュー](https://github.com/jerry47j-lang/quicksense/releases) · [検証記録](docs/VALIDATION.md)
 
-[はじめて使う方へ](docs/GETTING_STARTED.md#日本語)
+Windows・macOSのブラウザで、インストール・アカウント・APIキー・有料バックエンド不要です。現在のUIと学習解説は繁体字中国語です。4言語のREADMEはUI全体の翻訳完了を意味しません。
 
-![QuickSense の画面、現在は繁体字中国語](docs/images/desktop-preview.png)
+![実際の公開アプリ](docs/images/free-web-app.png)
 
-文字をコピーし、Windows は **Ctrl+Shift+Space**、Mac は **Cmd+Shift+Space** を押すと小さな検索ウィンドウが開きます。自分の名前とピクセルキャラクターを設定し、実際に出会った表現を集めて学べます。
+## 最初の1分
 
-## 機能
+1. **先試一次：deadline**で中国語の意味を表示します。名前は後から設定できます。
+2. **查詢文字**に単語や文を貼り付け、**快懂一下**を押します。中国語入力は英語、その他は繁体字中国語が既定の翻訳先で、手動変更も可能です。
+3. 任意の文は**在 Google 翻譯開啟**で、入力と選択言語を渡した公式Google翻訳を新しいタブで開きます。原文は残ります。内蔵無料AIや非公式APIではなく外部サイトへの明示的なリンクです。クリック時だけGoogleに送信するため、未許可の機密は送らないでください。
+4. 語義を保存するか、**把確認過的翻譯存回來**で確認済みの訳を貼り戻します。**我的單字庫**で復習、**學習小徑**で学習できます。
 
-- Open English WordNet 2025 に基づくオフライン英語辞典。127,311 見出し語、182,055 の保持語義、約 32.9 MiB。英語の語義説明であり、オフライン多言語翻訳モデルではありません。
-- 複数地域の職場表現、略語、日常語、ネット用語の入門パック。繁体字中国語の説明、地域、語調、独自に書いた例文、参考リンクを掲載。
-- 意味・語調、文法メモ、返信例のタブ。部分的な表現の説明と全文翻訳を区別します。
-- 名前と 3 種類のピクセルキャラクター、保存、間隔反復、JSON バックアップとマージ読み込み、A1–B1 の職場英語レッスン 8 課。
-- トレイ／メニューバーとクイック検索。ショートカットや貼り付けボタンを操作したときだけクリップボードを読みます。
-- 任意のセルフホスト AI サービス。全文翻訳、文法、返信提案、認証と月額予算の事前確保制限を提供。
+貼り付け権限が使えなければCtrl+V / Cmd+Vで直接入力します。読み込み失敗でも入力を残し、再試行と外部翻訳を案内します。支払いは要求しません。
 
-## 現在の制限
+## 無料機能と制限
 
-メイン UI とオフライン教材は現在、繁体字中国語です。オンラインサービスは原文・翻訳先の 12 言語に対応します。用語集は世界の最新流行語を網羅するものではなく、辞典は 2025 版に固定しています。
+- ECDICT英中辞典 **140,390見出し語／177,494検索形、19.2 MiB**。WordNet 2025英語辞典 **127,311見出し語、32.9 MiB**。頭文字単位で取得し、**偏好設定**から全オフライン資料（非圧縮約 **52.1 MiB**）を保存できます。初回接続／ダウンロードはオンラインが必要で、ブラウザがキャッシュを削除する場合があります。ネイティブ版は辞典を同梱します。
+- 複数の国の地域表現 **62件**、語調・独自例文・参照先つき。歴史的辞典と入門資料であり、世界の最新流行語を網羅するリアルタイム一覧ではありません。
+- A1–B1職場英語8段階、ローカル保存・間隔復習・JSONバックアップ／読み込み、名前とピクセルキャラクター。アカウント同期はありません。端末／URL変更やデータ消去前に保存してください。
+- 対応ブラウザのPWAインストール。ネイティブのトレイ／グローバルショートカットは含みません。
 
-オンライン分析には別途サービス設定が必要で、API キーはアプリに含めません。Windows と Mac は GitHub Actions で個別にビルドします。ビルド成功は実機 UI 検証を意味しません。Mac アプリはアドホック署名のみで Apple の公証は未取得です。OS の安全警告を回避しないでください。
+翻訳先は外部翻訳に適用され、既存の中国語メモは変わりません。自由文の文法修正とAI返信生成は無料オフラインエンジンに含みません。公開版はサービスのパスワードを集めず有料サービスも呼び出しません。上級ネイティブ利用者は[任意のAIサービス](docs/TRANSLATION_SERVICE.md)を配置できますが、キーと費用が必要になる場合があります。
 
-## 開発と配布
+## デスクトップの状態
 
-Node.js 22.12 以上が必要です。ネイティブビルドには Rust 1.90 以上と [Tauri の事前準備](https://v2.tauri.app/start/prerequisites/)も必要です。
+Windows x64、Mac Apple Silicon、Mac Intelは開発プレビューです。CIと実機のショートカット・トレイ・認証情報ストアの検証は別で、後者は未完了です。Windows正式署名、Apple公証は未完了で拒否される場合があります。OS保護を維持し、無料Web版を使ってください。
+
+## 開発と配置
+
+Node.js 22.12+、ネイティブにはRust 1.90+と[Tauri環境](https://v2.tauri.app/start/prerequisites/)が必要です。
 
 ```sh
 npm ci
 npm run check
 npm run dev
+npm run build
+node scripts/verify-dist.mjs
+node scripts/verify-offline.mjs
 npm run desktop
 npm run desktop:build
 ```
 
-`dev` はブラウザープレビュー、`desktop` は実際のデスクトップシェルです。辞典は同梱しています。`npm run dictionary:build` で公式データから再生成でき、元ファイルの SHA-256 を manifest に記録します。
+PagesのソースをGitHub Actionsに設定し、'.github/workflows/pages.yml'で配置します。別のリポジトリ名では'vite.config.ts'のbaseを変更します。辞典は同梱済みで、再生成は'npm run dictionary:build'と'npm run dictionary:bilingual'です。無料公開Pagesにも[利用量上限](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)があり、外部Googleの稼働は本プロジェクトで制御できません。
 
-[サービス設定手順](docs/TRANSLATION_SERVICE.md)に従い、D1 予算 DB とサーバーの秘密値 `OPENAI_API_KEY`、`SERVICE_ACCESS_KEY` を設定してください。アプリの設定でサービス URL とアクセスキーを入力し、データ送信の説明を確認して有効化します。デスクトップのキーは OS 資格情報ストア、ブラウザープレビューは現在のセッション内だけに保存します。
+## 全工程でCodexを使用
 
-## Codex による制作と貢献
+Jerryが方向を定め成果を確認し、Codexと調査・操作設計・開発・テスト・文書作成を進めています。[BUILD_LOG](docs/BUILD_LOG.md)と[VALIDATION](docs/VALIDATION.md)に根拠と残る検証を記録します。未実施の初心者／実機テストを完了と表示しません。
 
-Jerry が方向性を定めて成果をレビューし、調査、設計、実装、テスト、文書の全工程で Codex を活用しています。[開発記録](docs/BUILD_LOG.md)と[検証状況](docs/VALIDATION.md)をご覧ください。
+## サポートとライセンス
 
-用語の追加には言語・地域、語調、参考資料、独自の例文、整理日を添えてください。[問題報告](https://github.com/jerry47j-lang/quicksense/issues/new/choose)。コードは MIT、辞典は CC BY 4.0 と元の Princeton WordNet 条項に従います。[第三者の表示とライセンス](THIRD_PARTY_NOTICES.md)。個人の学習データはコミットしません。
+[トラブル対応](docs/GETTING_STARTED.md) · [FAQとプライバシー](docs/FAQ_PRIVACY.md) · [不具合報告](https://github.com/jerry47j-lang/quicksense/issues/new/choose)。ブラウザ・バージョン・再現手順を記載し、機密は除いてください。地域表現の投稿には地域・語調・出典・日付つき独自例文が必要です。
+
+コードMIT、ECDICT MIT、WordNet CC BY 4.0とPrinceton条項。[権利表記](THIRD_PARTY_NOTICES.md)を確認してください。個人の検索はコミットしません。

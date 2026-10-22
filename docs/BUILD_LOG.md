@@ -18,3 +18,16 @@ Concrete design decisions:
 - The verified CI-generated Rust lockfile is retained with the source, and runtime JavaScript licenses are included in desktop assets. Four README entries link to actual interface screenshots and shared validation records.
 
 See [VALIDATION](VALIDATION.md) for the checks actually completed and outstanding work. No external design/test participants, demo video, public-user counts or Codex application acceptance are claimed.
+
+## 2026-10-22 — free first-use path
+
+Jerry asked whether GitHub visitors could use the app immediately, and requested a free way to prevent first-use frustration. Codex found three barriers: English-only definitions, installer signing friction, and service setup required for arbitrary translation.
+
+- Published the same app through free public GitHub Pages: no account, installation, key or paid backend. Public browser mode never calls the optional paid service, even with old stored service preferences.
+- Added a pinned MIT ECDICT companion, converted with OpenCC: 140,390 Traditional Chinese headwords / 177,494 lookup forms. WordNet remains separately credited.
+- Put the first meaning beside the input, kept the pixel room compact, and added a three-step example without forced naming. Public browser testing caught a clipped Settings entry on 720px-high displays; the tip now collapses and the sidebar scrolls.
+- Added explicit Google Translate handoff, Chinese→English/other→Traditional Chinese defaults, manual language choice, clipboard fallback and user-confirmed translation notes. No unofficial API or invented full-sentence result.
+- Added worker shell/dictionary caching and cancellable full-pack download. Success requires verifying all 56 cached entries. External/non-GET requests are excluded. Storage failures keep the current session usable and prompt backup.
+- Updated four equivalent README guides, troubleshooting and privacy. Native packages remain developer previews; no paid hosting, provider call, signing or notarization was purchased.
+
+See VALIDATION for actual evidence. Developer QA is not claimed as a five-person novice study or physical-device acceptance.

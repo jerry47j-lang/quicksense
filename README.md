@@ -4,59 +4,57 @@
 
 **Understand quickly. Learn a little every day.**
 
-[Download desktop preview](https://github.com/jerry47j-lang/quicksense/releases) · [Build and test evidence](docs/VALIDATION.md)
+[Open the free app](https://jerry47j-lang.github.io/quicksense/) · [Desktop developer previews](https://github.com/jerry47j-lang/quicksense/releases) · [Validation](docs/VALIDATION.md)
 
-[First-use guide (four languages)](docs/GETTING_STARTED.md)
+Use the browser app on Windows or macOS without installation, an account, API keys or a paid backend. The current UI and learning notes are Traditional Chinese. Four README languages do not imply four fully localized interfaces.
 
-![QuickSense shared desktop interface, currently Traditional Chinese](docs/images/desktop-preview.png)
+![Actual public app](docs/images/free-web-app.png)
 
-A quiet desktop language companion for Windows and macOS. Copy an unfamiliar expression, press **Ctrl+Shift+Space** (Windows) or **Cmd+Shift+Space** (macOS), and look it up in a small window. Your own pixel study, name and character make the learning space yours.
+## First minute
 
-## What works in this version
+1. Choose **先試一次：deadline** (try deadline) to see its Chinese meaning. Pick a name later.
+2. Paste a word or sentence into **查詢文字** and click **快懂一下**. Chinese input automatically targets English; other input targets Traditional Chinese. You can select a target manually.
+3. For an arbitrary sentence, click **在 Google 翻譯開啟**. The official Google Translate website opens in a new tab with your submitted text and selected language. QuickSense retains your input. This is an explicit external website handoff, not an embedded free AI API. Only clicking the link sends text to Google; avoid confidential work material.
+4. Save a dictionary result, or paste a checked translation back with **把確認過的翻譯存回來**. Review under **我的單字庫**, learn under **學習小徑**.
 
-- Offline English dictionary: **127,311 headwords**, 182,055 retained senses, **32.9 MiB** of letter-indexed JSON from Open English WordNet 2025. English definitions; this is not an offline bilingual translation model.
-- A starter collection of regional expressions, workplace phrases and abbreviations across multiple languages. Independently written Traditional Chinese notes explain register and context; examples are original.
-- Three lookup tabs: meaning/register, grammar notes, and example replies. Phrase matches are explicitly distinguished from complete sentence translations.
-- Personal name, three pixel companions, saved words, spaced review, JSON backup/import, and eight ordered A1–B1 workplace lessons.
-- Desktop tray/menu-bar entry, a quick lookup window and user-triggered clipboard access. No background clipboard monitoring.
-- Optional self-hosted AI translation service for arbitrary sentences, grammar and suggested replies, with authentication and a monthly spending reservation gate.
+If clipboard access fails, paste directly with Ctrl+V / Cmd+V. If dictionary loading fails, your input stays and retry/external translation remain available. No payment is requested.
 
-## Current boundaries
+## Free features and limits
 
-The main interface and offline learning explanations are in Traditional Chinese. The online service accepts 12 source/target language choices. This is a starter regional-expression pack, **not an exhaustive or automatically current global slang archive**. The dictionary source is the pinned 2025 edition.
+- ECDICT English→Traditional Chinese: **140,390 headwords / 177,494 lookup forms**, 19.2 MiB. WordNet 2025: **127,311 English headwords**, 32.9 MiB. Files load by initial; **偏好設定** can save both complete offline packs, about **52.1 MiB** uncompressed. First visit/download needs a connection; browser storage may be evicted. Native packages include the files.
+- **62 regional usage notes** across several countries/languages with register, original examples and references. Historical dictionary data and this starter pack are not a complete/current global slang feed.
+- Eight ordered A1–B1 workplace lessons, local collections, spaced review, JSON backup/import, name and pixel companions. No account sync; back up before changing devices/origins or clearing browser data.
+- PWA installation where supported by the browser. It does not add native tray/global shortcuts.
 
-Online analysis requires a configured service. No provider API key is shipped in the app. Windows/macOS installers are built independently in GitHub Actions; build success does not imply native visual or signed-release verification. macOS bundles are ad-hoc signed, not notarized. Do not bypass OS security warnings.
+The target dropdown controls external translation, not the existing Chinese notes. Arbitrary grammar correction and generated AI replies are not included in the free offline engine. The public app never calls the optional paid service or asks for service passwords. Advanced native users can separately deploy the [optional AI service](docs/TRANSLATION_SERVICE.md), requiring secrets and potentially incurring costs.
 
-## Develop
+## Desktop status
 
-Node.js 22.12+ is required. Native builds additionally require Rust 1.90+ and the [Tauri platform prerequisites](https://v2.tauri.app/start/prerequisites/).
+Windows x64, Mac Apple Silicon and Mac Intel remain **developer previews**. CI build success is separate from physical-device shortcut/tray/keyring acceptance, which is pending. Windows is unsigned; Mac is ad-hoc signed, not notarized. If installation is blocked, use the free web app and keep OS protections enabled.
+
+## Develop and deploy
+
+Node.js 22.12+; native builds also need Rust 1.90+ and [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```sh
 npm ci
 npm run check
-npm run dev           # browser UI preview, port 5186
-npm run desktop       # real desktop shell
-npm run desktop:build # native installer for the host platform
+npm run dev
+npm run build
+node scripts/verify-dist.mjs
+node scripts/verify-offline.mjs
+npm run desktop
+npm run desktop:build
 ```
 
-The dictionary is already included. To rebuild it from the official release:
-
-```sh
-npm run dictionary:build
-```
-
-This downloads the 2025 archive from `en-word.net`, records its SHA-256 in the manifest and converts it into letter-indexed files. It retains up to 12 senses and two examples per sense. It does not copy Wiktionary page content into the expression pack.
-
-## Optional translation service
-
-See [the deployment guide](docs/TRANSLATION_SERVICE.md). Configure `OPENAI_API_KEY` and `SERVICE_ACCESS_KEY` as server secrets, create/apply the D1 budget database, and deploy the Worker. Enter the service URL and service access key in app preferences and explicitly enable online analysis. Desktop service access keys use the Windows/macOS credential store; browser previews keep them only in the current session.
+Enable Pages with GitHub Actions as its source; use '.github/workflows/pages.yml'. For another repository name, change 'vite.config.ts' base. Dictionaries are included; rebuild with 'npm run dictionary:build' and 'npm run dictionary:bilingual'. Public Pages is free subject to [GitHub limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits); Google availability is outside this project's control.
 
 ## Built throughout with Codex
 
-Jerry sets the product direction and reviews the results. Codex is used throughout research, interaction design, implementation, tests and documentation. Third-party frameworks and dictionary data remain credited. See [BUILD_LOG](docs/BUILD_LOG.md) and [VALIDATION](docs/VALIDATION.md) for concrete evidence and outstanding checks.
+Jerry sets the product direction and reviews results. Codex is used throughout research, interaction design, implementation, tests and documentation. [BUILD_LOG](docs/BUILD_LOG.md) and [VALIDATION](docs/VALIDATION.md) record evidence and pending checks. No completed novice studies or physical-device tests are invented.
 
-## Contribute and license
+## Help and license
 
-Regional usage varies. Contributions should include a reference, locale, register, original example and a dated note. Report incorrect explanations through the [issue form](https://github.com/jerry47j-lang/quicksense/issues/new/choose).
+[Four-language troubleshooting](docs/GETTING_STARTED.md) · [FAQ and privacy](docs/FAQ_PRIVACY.md) · [Report a problem](https://github.com/jerry47j-lang/quicksense/issues/new/choose). Include browser/version and reproduction steps; omit private content. Regional contributions need locale, register, reference and a dated original example.
 
-Application code: MIT. Open English WordNet: CC BY 4.0 plus underlying Princeton WordNet terms; see [notices](THIRD_PARTY_NOTICES.md). No user queries or personal study data are committed to this repository.
+Code MIT, ECDICT MIT, WordNet CC BY 4.0 plus underlying Princeton terms. See [notices](THIRD_PARTY_NOTICES.md). No personal queries are committed.

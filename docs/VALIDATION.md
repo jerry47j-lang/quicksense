@@ -1,40 +1,46 @@
 # Validation record
 
-Status: working preview, 2026-10-21. Live AI and native visual verification remain outstanding.
+Status: free public web beta + native developer previews, 2026-10-22. Physical Windows/macOS acceptance and signing remain outstanding.
 
-## Automated
+## Public distribution
 
-- **29 tests pass**, with TypeScript checks. Coverage includes phrase boundaries, Unicode normalization, source-language filters, English dictionary fallback, unsafe dictionary property names, review intervals, backup import/export, ordered lessons and translation input/output contracts. Partial phrase matches are saved as phrase cards; curated full examples retain their complete translations.
-- Seven service integration cases run against an actual in-memory SQLite table: authentication, invalid input, zero budget, concurrent reservations, daily-cap rollback, successful usage settlement, unknown network outcomes and browser-origin rejection. Some cases cover more than one check. Provider responses are mocked; no paid requests were made.
-- `npm run build` passes and generates the production frontend. `npm audit` reports zero known vulnerabilities for the installed lockfile.
-- The Cloudflare Worker dry-run bundle passes. This is not a deployment or a real model response.
-- GitHub Actions independently builds Windows x64, macOS Apple Silicon and macOS Intel installers. See the repository Actions page for current outcomes.
-- All three final native builds passed for application commit `56a9ed0`: [CI run 39609371893](https://github.com/jerry47j-lang/quicksense/actions/runs/39609371893). Later commits only add documentation. Installers are distributed as the `v0.1.0-preview.1` developer prerelease.
+- Live app: https://jerry47j-lang.github.io/quicksense/
+- Source: https://github.com/jerry47j-lang/quicksense
+- Packages: [v0.2.0-preview.1](https://github.com/jerry47j-lang/quicksense/releases/tag/v0.2.0-preview.1), generated from application commit `0aac9f1ca8331c022df9ce83536e99b1197e96af`.
+- [Native CI run 39733405281](https://github.com/jerry47j-lang/quicksense/actions/runs/39733405281): Windows x64, Mac Apple Silicon and Mac Intel all passed. EXE, MSI and both DMGs downloaded; SHA-256 checksums accompany the public assets. Later commits update documents only.
+- [Pages run 39733405252](https://github.com/jerry47j-lang/quicksense/actions/runs/39733405252): checks, build, subdirectory paths, generated-worker verification, upload and deployment passed.
 
-## Browser interaction
+## Automated checks
 
-Observed in the shared browser UI:
+- TypeScript and **45 tests pass**. New cases use actual shipped ECDICT files for deadline, serendipity, meeting and went; check independent English/Chinese load failures, full-sentence miss boundaries, exact Unicode/reserved-character handoff, 5,000-character rejection without truncation, automatic/manual target resolution, and blocked-storage in-memory fallback. Existing coverage includes normalized phrase boundaries, source filters, prototype-safe dictionary properties, reviews, backup/import, ordered lessons and service contracts.
+- `npm run build` passes for both root and Pages base configuration. The Pages artifact check parses all 54 dictionary chunks, resolves every entry script/style/icon path and verifies manifest scope. The generated worker is exercised in a Node VM: offline shell navigation, cached dictionary without network, and external/out-of-scope/non-GET exclusions. This simulates network failure; it is not a physical-device offline browser session.
+- `npm audit --audit-level=high` reports zero known vulnerabilities for the lockfile in all final build jobs.
+- Optional service integration cases use an actual in-memory SQLite budget table and mocked provider responses. They verify auth, invalid input, zero budget, reservation concurrency, cap rollback, settlement and unknown provider outcomes. No paid provider call was made and no Worker was deployed.
+- CI-generated Rust lockfile matches committed package content after newline normalization.
 
-- A real dictionary lookup of `serendipity` returns the packaged WordNet definition.
-- Saving a result creates a visible collection row. Revealing a review and selecting remembered finishes that session and changes its due state.
-- Naming the study, answering both first-lesson questions, unlocking lesson two, and reloading preserve the local learning state.
-- Filtering world expressions to Japanese returns seven entries. Japanese and English quick-window lookups show the appropriate contextual notes.
-- A partial `circle back` match is labeled as a phrase explanation rather than a complete sentence translation. An unknown sentence shows a service-configuration prompt, without an invented result.
-- Ctrl+Enter lookup, returning from meeting mode, and normal/compact layouts work. At the 440-pixel quick-window width, measured content width stays within the viewport.
-- Browser backup download contains the collected word and completed lesson, excludes the service URL/key, and disables online analysis in the exported profile.
+## Observed public browser interactions
 
-The browser preview does not verify OS keyring, native global shortcuts, native save dialogs or tray behavior. Screenshots use a local test profile and show actual app state:
+Tested at the deployed HTTPS origin, using invented non-confidential examples:
 
-![Study and lookup](images/desktop-preview.png)
+- Fresh origin opens a three-step no-account onboarding. Clicking its deadline example loads an actual Chinese dictionary meaning beside input, rather than a prefilled fake result.
+- Saving deadline updates the collection count. Querying 我餓了 resolves the automatic target to English and shows a labeled Google Translate handoff. The actual external page returns “I'm hungry”. The source input remains in QuickSense.
+- Manually choosing Japanese updates the handoff URL's target. A full reload preserves that preference, collections, history and the completed onboarding state. Unsaved input itself is not promised to persist through a reload.
+- Pasting a confirmed translation note saves 我餓了 / I'm hungry. Both it and deadline remain visibly in the collection after reload.
+- Public Preferences contains no AI service password/URL form. The real 52.1 MiB offline download completes and the app verifies all **56 files** in the versioned cache before showing success.
+- Public browser testing found Settings clipped below a 720px-high viewport. The sidebar now scrolls and its decorative tip collapses; the same button is reachable and opens Preferences in the final version.
+- The first lesson opens, accepts both correct answers and records completion/unlocks the next lesson. Lookup and learning do not require a translation service.
+- The 1280×720 view keeps the input, first Chinese meaning and language controls visible. Pixel decoration does not cover the result. The source screenshot below is the actual deployed app and contains only invented test data.
 
-![Meeting lookup](images/meeting-lookup.png)
+![Deployed free app](images/free-web-app.png)
 
-## Not yet verified
+Previous preview browser checks also exercised spaced review, naming, lesson persistence, Japanese filtering, partial phrase labels, keyboard lookup, JSON backup and compact quick-window layout. Native tray/keyring/clipboard/shortcuts are not proven by browser checks.
 
-- Native visual and shortcut/clipboard/tray tests on both physical operating systems.
-- Signed Windows release and notarized macOS distribution.
-- Live paid translation response, deployed Worker and real budget exhaustion under provider traffic.
-- Native-speaker review of every regional expression and multilingual usability tests.
-- Five novice user sessions, accessibility audit, cross-device sync and a demo video.
+## Not yet verified / not claimed
 
-The main interface is currently Traditional Chinese. Four README languages do not imply four fully localized interfaces. The curated regional phrase starter pack does not guarantee comprehensive or current slang coverage.
+- Physical Windows and Mac UI, global shortcut, tray, keyring, installation/uninstallation acceptance.
+- Signed Windows release and Apple notarization. OS blocking is addressed by the free browser entry, not by bypass instructions.
+- Actual network-disconnected browser/PWA sessions on multiple devices. Worker failure simulation and cache-entry verification pass; browser eviction and app updates may require re-downloading packs.
+- Five novice sessions, cross-browser/device usability studies, complete four-language UI, accessibility audit and native-speaker review of every note.
+- Live paid AI, real provider budget exhaustion, account sync or a demo video.
+
+The four README guides and FAQ are translated; the current UI and offline learning explanations are Traditional Chinese. Dictionaries and 62 regional notes are historical/starter data, not comprehensive or automatically current worldwide slang coverage. Arbitrary sentence translation uses an explicit external website and depends on internet/Google availability. No paid hosting, provider API, signing or notarization was purchased.

@@ -1,54 +1,60 @@
-# QuickSense 快懂
+# QuickSense · 快懂
 
 [English](README.md) · [繁體中文](README.zh-TW.md) · [한국어](README.ko.md) · [日本語](README.ja.md)
 
-**快快看懂，慢慢學會。你的 Windows／macOS 語言小書房。**
+**快快看懂，慢慢學會。**
 
-[下載桌面預覽版](https://github.com/jerry47j-lang/quicksense/releases) · [實際驗證紀錄](docs/VALIDATION.md)
+[直接免費使用](https://jerry47j-lang.github.io/quicksense/) · [桌面開發預覽版](https://github.com/jerry47j-lang/quicksense/releases) · [驗證紀錄](docs/VALIDATION.md)
 
-[開始使用：四語操作說明](docs/GETTING_STARTED.md#繁體中文)
+Windows、macOS 都能先用網頁版，不用安裝、帳號、API 金鑰或付費後端。現階段介面與學習筆記為繁體中文；四語 README 不代表介面已完整四語化。
 
-![快懂的像素小書房與查詢介面](docs/images/desktop-preview.png)
+![實際公開版](docs/images/free-web-app.png)
 
-複製看不懂的外文，按 Windows 的 **Ctrl+Shift+Space** 或 macOS 的 **Cmd+Shift+Space**，就能在小窗查詢。設定自己的名字與像素夥伴，從每天真正遇到的內容開始學習。
+## 一分鐘開始
 
-## 這一版提供什麼
+1. 按「先試一次：deadline」，直接看中文意思，名字稍後再取。
+2. 在「查詢文字」貼入單字或句子，按「快懂一下」。中文自動轉英文，其他來源預設轉繁中，也能手動選擇。
+3. 任意整句按「在 Google 翻譯開啟」，會在新分頁帶入文字與語言，快懂保留原文。這是明確的外部網站入口，不是假裝內建免費 AI。只有點連結才將文字交給 Google，請勿傳送未經授權的機密內容。
+4. 收藏字義，或按「把確認過的翻譯存回來」貼回核對過的結果，到「我的單字庫」複習、「學習小徑」學習。
 
-- 127,311 個英文詞條、182,055 個保留詞義，約 32.9 MiB。資料採 Open English WordNet 2025，按字首載入；這是英文辭義，不是離線多國翻譯模型。
-- 多國用語起步庫：包含職場縮寫、日常口語與網路用語，附地區、語氣、繁中說明、原創例句與參考連結。
-- 意思與語氣、文法筆記、參考回覆；只辨識到片語時會清楚標示，不假裝完成整句翻譯。
-- 個人名字、三個像素夥伴、收藏、間隔複習、JSON 備份合併，以及八段 A1 到 B1 的職場英語課程。
-- 系統匣／選單列常駐與快查小窗；只在你操作快捷鍵或貼上按鈕時讀剪貼簿。
-- 可選的自架 AI 翻譯服務：支援任意句子、文法與回覆建議，包含身分驗證和每月用量預留機制。
+貼上權限失敗時直接 Ctrl+V／Cmd+V。辭庫載入失敗會保留文字，提供重試與外部翻譯，不要求付款。
 
-## 狀態與限制
+## 免費功能與限制
 
-主介面與離線教材目前是繁體中文，連線服務提供十二種來源／目標語言選項。用語庫不是完整的全球流行語排名，也沒有自動追蹤所有新詞。英文辭典固定為 2025 版。
+- ECDICT 英漢辭庫 **140,390 詞條／177,494 查詢形式，19.2 MiB**；WordNet 2025 **127,311 英文詞條，32.9 MiB**。依字首載入；「偏好設定」可下載完整離線包，未壓縮約 **52.1 MiB**。首次使用／下載需連線，瀏覽器可能回收快取；原生桌面包已包含資料。
+- **62 則各國用語筆記**，附語氣、原創例句及參考來源。歷史辭典與入門包不保證涵蓋所有最新全球流行語。
+- 八段 A1–B1 職場課程、收藏、間隔複習、JSON 備份／匯入、名字及像素夥伴。無帳號同步，切換裝置／網址或清除資料前先備份。
+- 支援 PWA 的瀏覽器可加入桌面；不含原生常駐選單及全域快捷鍵。
 
-連線分析需先設定服務；應用程式不含 AI 供應商金鑰。Windows 與 Mac 分別在 GitHub Actions 打包，打包通過不等於實機介面驗證。Mac 建置使用臨時簽署，尚未取得 Apple 公證；請勿略過系統安全警告。
+翻譯目標控制外部翻譯，不會重寫繁中筆記。免費離線引擎不包含任意句子的文法校正及 AI 回覆生成。公開網頁版不收服務通行碼，也不呼叫選用付費服務。進階桌面使用者可自架[選用 AI 服務](docs/TRANSLATION_SERVICE.md)，需要密鑰且可能產生費用。
 
-## 開發與建置
+## 桌面版狀態
 
-安裝 Node.js 22.12 以上。桌面建置另需 Rust 1.90 以上與 [Tauri 系統需求](https://v2.tauri.app/start/prerequisites/)。
+Windows x64、Mac Apple Silicon、Mac Intel 仍為開發預覽版。CI 建置成功與實機快捷鍵／常駐選單／憑證庫驗收分開記錄；後者待完成。Windows 尚未正式簽章、Mac 尚未 Apple 公證，遭系統阻擋時先用免費網頁版，保留系統安全保護。
+
+## 開發與部署
+
+需要 Node.js 22.12+；原生建置另需 Rust 1.90+ 與 [Tauri 環境](https://v2.tauri.app/start/prerequisites/)。
 
 ```sh
 npm ci
 npm run check
 npm run dev
+npm run build
+node scripts/verify-dist.mjs
+node scripts/verify-offline.mjs
 npm run desktop
 npm run desktop:build
 ```
 
-`npm run dev` 是瀏覽器預覽；`npm run desktop` 才會啟動原生桌面外殼。辭典已內建；`npm run dictionary:build` 可從官方來源重新下載並轉換，來源 SHA-256 記錄在 manifest。
+Pages 來源選 GitHub Actions，使用 '.github/workflows/pages.yml'。不同儲存庫名稱須修改 'vite.config.ts' 的 base。辭庫已內附，重建命令為 'npm run dictionary:build' 及 'npm run dictionary:bilingual'。免費公開 Pages 仍有 [GitHub 使用量上限](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits)，外部 Google 的可用性不由本專案控制。
 
-## 設定翻譯服務
+## 全程使用 Codex 製作
 
-依 [部署說明](docs/TRANSLATION_SERVICE.md) 建立 D1 資料庫、設定服務端 `OPENAI_API_KEY` 與 `SERVICE_ACCESS_KEY`，再部署 Worker。在偏好設定填服務網址與通行碼，閱讀資料傳送說明後啟用。桌面通行碼存在系統憑證庫；瀏覽器預覽僅保留在目前工作階段。
+由 Jerry 定義產品方向與審核成果，全程使用 Codex 協作完成需求研究、互動設計、程式開發、測試與文件。[BUILD_LOG](docs/BUILD_LOG.md) 與 [VALIDATION](docs/VALIDATION.md) 記錄證據及待完成事項，不編造新手測試或實機驗收結果。
 
-## 全程使用 Codex
+## 協助與授權
 
-Jerry 定義方向並審核成果，Codex 協作完成需求研究、互動設計、程式、測試與文件。實際紀錄見 [開發紀錄](docs/BUILD_LOG.md) 與 [驗證狀態](docs/VALIDATION.md)，不虛構使用者成效。
+[四語疑難排解](docs/GETTING_STARTED.md) · [常見問題與隱私](docs/FAQ_PRIVACY.md) · [回報問題](https://github.com/jerry47j-lang/quicksense/issues/new/choose)。請附瀏覽器／版本與重現步驟，勿附機密內容。用語投稿需地區、語氣、來源及帶日期的原創例句。
 
-## 貢獻與授權
-
-新增用語請附語言／地區、場合、參考來源、原創例句及整理日期。[回報問題](https://github.com/jerry47j-lang/quicksense/issues/new/choose)。程式採 MIT；辭典採 CC BY 4.0 與原始 Princeton WordNet 條款，詳見 [第三方聲明](THIRD_PARTY_NOTICES.md)。個人查詢與學習紀錄不會提交到儲存庫。
+程式 MIT、ECDICT MIT、WordNet CC BY 4.0 並保留 Princeton 條款，見[第三方聲明](THIRD_PARTY_NOTICES.md)。不提交個人查詢。
