@@ -26,7 +26,7 @@ fn write_clipboard(app:tauri::AppHandle,text:String)->Result<(),String>{
 #[tauri::command]
 fn open_reference(app:tauri::AppHandle,url:String)->Result<(),String>{
  let parsed=url::Url::parse(&url).map_err(|_|"invalid_reference")?;
- if parsed.scheme()!="https"||!parsed.username().is_empty()||parsed.password().is_some()||!matches!(parsed.host_str(),Some("github.com"|"en.wiktionary.org"|"en-word.net"|"creativecommons.org"|"translate.google.com"|"jerry47j-lang.github.io")){return Err("invalid_reference".into());}
+ if parsed.scheme()!="https"||!parsed.username().is_empty()||parsed.password().is_some()||!matches!(parsed.host_str(),Some("github.com"|"en.wiktionary.org"|"en-word.net"|"creativecommons.org"|"translate.google.com"|"mymemory.translated.net"|"jerry47j-lang.github.io")){return Err("invalid_reference".into());}
  app.opener().open_url(url,None::<&str>).map_err(|_|"open_failed".into())
 }
 #[tauri::command]
@@ -93,3 +93,4 @@ pub fn run(){
  .on_window_event(|window,event|{if let tauri::WindowEvent::CloseRequested{api,..}=event{api.prevent_close();let _=window.hide();}})
  .run(tauri::generate_context!()).expect("QuickSense could not start");
 }
+

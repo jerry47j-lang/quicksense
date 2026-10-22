@@ -4,6 +4,8 @@ export const defaultProfile: Profile = {
   avatar: "sprout",
   target: "zh-TW",
   smartTarget: true,
+  autoTranslate: true,
+  freeTranslationConsent: false,
   source: "auto",
   mode: "work",
   serviceUrl: "",
@@ -60,6 +62,8 @@ export function loadProfile(): Profile {
   return {
     ...defaultProfile,
     ...p,
+    freeTranslationConsent: p.freeTranslationConsent === true,
+    autoTranslate: p.autoTranslate !== false,
     smartTarget:
       typeof p.smartTarget === "boolean"
         ? p.smartTarget
@@ -129,7 +133,12 @@ export function makeBackup(profile: Profile, items: SavedItem[]) {
     format: "quicksense-backup",
     version: 1,
     exportedAt: new Date().toISOString(),
-    profile: { ...profile, serviceUrl: "", allowOnline: false },
+    profile: {
+      ...profile,
+      serviceUrl: "",
+      allowOnline: false,
+      freeTranslationConsent: false,
+    },
     items,
   };
 }

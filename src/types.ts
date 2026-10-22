@@ -62,7 +62,8 @@ export type LookupResult = {
   term?: Term;
   dictionary?: DictionaryEntry;
   analysis?: Analysis;
-  mode: "local" | "dictionary" | "online" | "miss";
+  translation?: import("./lib/inline-translation").InlineTranslation;
+  mode: "local" | "dictionary" | "online" | "miss" | "translated";
   cached?: boolean;
 };
 export type SavedItem = {
@@ -81,6 +82,8 @@ export type Profile = {
   avatar: "sprout" | "cat" | "fox";
   target: Language;
   smartTarget?: boolean;
+  autoTranslate?: boolean;
+  freeTranslationConsent?: boolean;
   source: Language | "auto";
   mode: "work" | "break" | "meeting";
   serviceUrl: string;

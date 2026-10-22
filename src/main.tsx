@@ -50,6 +50,10 @@ import { PixelAvatar, PixelRoom } from "./components/PixelRoom";
 import { FreeTranslation } from "./components/FreeTranslation";
 import { assetPath } from "./lib/assets";
 import { resolveTarget } from "./lib/free-translation";
+import {
+  translateInline,
+  translationErrorMessage,
+} from "./lib/inline-translation";
 import { registerOffline, downloadOfflinePack } from "./lib/offline";
 import { terms } from "./data/terms";
 import { lessons } from "./data/lessons";
@@ -122,6 +126,7 @@ function App() {
       | "backup"
       | "online"
       | "ai"
+      | "free-consent"
       | null
     >(!quick && !profile.onboarded ? "welcome" : null),
     [nameDraft, setNameDraft] = useState(profile.name),
@@ -140,6 +145,10 @@ function App() {
     } | null>(null),
     [isConnected, setConnected] = useState(navigator.onLine);
   const downloadRef = useRef<AbortController | null>(null);
+  const translationAbort = useRef<AbortController | null>(null),
+    lastLookupKey = useRef("");
+  const [composing, setComposing] = useState(false),
+    [translationError, setTranslationError] = useState("");
   const [storageOk, setStorageOk] = useState(storageAvailable);
   const [worldText, setWorldText] = useState(""),
     [worldLanguage, setWorldLanguage] = useState("all"),
@@ -166,6 +175,23 @@ function App() {
   profileRef.current = profile;
   const notify = (t: string) => setToast(t);
   function updateProfile(changes: Partial<Profile>) {
+    if (changes.autoTranslate === false) {
+      translationAbort.current?.abort();
+      requestRef.current++;
+      setBusy(false);
+    }
+    if (
+      ["source", "target", "smartTarget", "freeTranslationConsent"].some(
+        (key) => Object.hasOwn(changes, key),
+      )
+    ) {
+      translationAbort.current?.abort();
+      requestRef.current++;
+      lastLookupKey.current = "";
+      setBusy(false);
+      setTranslationError("");
+      setResult(null);
+    }
     setProfile((current) => {
       const next = { ...current, ...changes };
       saveProfile(next);
@@ -236,7 +262,60 @@ function App() {
     return () => clearTimeout(id);
   }, [toast]);
   useEffect(() => {
+    if (
+      view !== "lookup" ||
+      composing ||
+      profile.autoTranslate === false ||
+      !query.trim() ||
+      modal
+    )
+      return;
+    const key = JSON.stringify([
+      query.trim(),
+      profile.source,
+      profile.target,
+      profile.smartTarget,
+    ]);
+    const timer = setTimeout(() => {
+      if (lastLookupKey.current !== key) void runLookup(query);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [
+    query,
+    profile.source,
+    profile.target,
+    profile.smartTarget,
+    profile.autoTranslate,
+    profile.freeTranslationConsent,
+    composing,
+    view,
+    modal,
+  ]);
+  useEffect(
+    () => () => {
+      translationAbort.current?.abort();
+    },
+    [],
+  );
+  function changeQuery(value: string) {
+    translationAbort.current?.abort();
+    requestRef.current++;
+    lastLookupKey.current = "";
+    setBusy(false);
+    setTranslationError("");
+    setResult(null);
+    setQuery(value);
+  }
+  function requestFreeTranslation() {
+    if (!profileRef.current.freeTranslationConsent) {
+      setModal("free-consent");
+      return;
+    }
+    void runLookup(query, false, true);
+  }
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.isComposing) return;
       if (e.key === "Escape") {
         setModal(null);
         if (quick && desktop) invoke("hide_quick").catch(() => {});
@@ -284,7 +363,11 @@ function App() {
       unlisten?.();
     };
   }, []);
-  async function runLookup(text = query, forceOnline = false) {
+  async function runLookup(
+    text = query,
+    forceOnline = false,
+    forceFree = false,
+  ) {
     const input = text.trim();
     if (!input) {
       inputRef.current?.focus();
@@ -295,21 +378,32 @@ function App() {
       return;
     }
     const request = ++requestRef.current;
+    translationAbort.current?.abort();
+    const controller = new AbortController();
+    translationAbort.current = controller;
+    const p = profileRef.current;
+    lastLookupKey.current = JSON.stringify([
+      input,
+      p.source,
+      p.target,
+      p.smartTarget,
+    ]);
     setBusy(true);
     setResult(null);
+    setTranslationError("");
     setTab("meaning");
     setExpanded(false);
     try {
-      const p = profileRef.current;
-      const local = await lookupLocal(input, p.source);
+      let local: LookupResult;
+      try {
+        local = await lookupLocal(input, p.source);
+      } catch {
+        local = { query: input, mode: "miss" };
+      }
       if (request !== requestRef.current) return;
       setResult(local);
       setHistory(addHistory(input));
-      if (
-        desktop &&
-        (forceOnline ||
-          (p.allowOnline && p.serviceUrl && local.mode === "miss"))
-      ) {
+      if (desktop && forceOnline) {
         if (!p.allowOnline || !p.serviceUrl) {
           setModal("online");
           return;
@@ -329,8 +423,34 @@ function App() {
           try {
             sessionStorage.setItem(cacheKey, JSON.stringify(analysis));
           } catch {}
+      } else if (
+        p.freeTranslationConsent &&
+        (forceFree ||
+          local.mode === "miss" ||
+          (local.term &&
+            ![
+              local.term.term,
+              ...(local.term.aliases || []),
+              local.term.example,
+            ].some((t) => normalize(t) === normalize(input))) ||
+          resolveTarget(input, p) !== "zh-TW")
+      ) {
+        try {
+          const translation = await translateInline(
+            input,
+            p.source,
+            resolveTarget(input, p),
+            controller.signal,
+          );
+          if (request === requestRef.current)
+            setResult({ ...local, mode: "translated", translation });
+        } catch (error) {
+          if (request === requestRef.current && !controller.signal.aborted)
+            setTranslationError(translationErrorMessage(error));
+        }
       }
     } catch (e) {
+      if (request !== requestRef.current) return;
       const code =
         e instanceof Error ? e.message : typeof e === "string" ? e : "unknown";
       notify(
@@ -383,11 +503,17 @@ function App() {
         id: crypto.randomUUID(),
         query: collectionQuery(result),
         meaning: lookupMeaning(result),
-        language: result.analysis?.language || result.term?.language || "en",
-        source: result.analysis
-          ? profile.serviceUrl
-          : result.term?.source ||
-            (result.dictionary ? "https://en-word.net/" : profile.serviceUrl),
+        language:
+          result.translation?.source ||
+          result.analysis?.language ||
+          result.term?.language ||
+          "en",
+        source: result.translation
+          ? "https://mymemory.translated.net/"
+          : result.analysis
+            ? profile.serviceUrl
+            : result.term?.source ||
+              (result.dictionary ? "https://en-word.net/" : profile.serviceUrl),
         createdAt: Date.now(),
         dueAt: Date.now(),
         reviews: 0,
@@ -560,6 +686,7 @@ function App() {
     !!term && normalize(result?.query || "") === normalize(term.example);
   const foundPhrase =
     !result?.analysis &&
+    !result?.translation &&
     !!term &&
     normalize(result?.query || "") !== normalize(term.term) &&
     !sentenceMatch;
@@ -745,7 +872,7 @@ function App() {
                 <CheckCircle2 size={14} />
                 查字、用語、小課免費
               </span>
-              <span>整句：開啟 Google 翻譯</span>
+              <span>整句：直接顯示譯文</span>
               <button onClick={() => setModal("welcome")}>
                 第一次用？30 秒了解
                 <ArrowRight size={13} />
@@ -881,7 +1008,14 @@ function App() {
                         >
                           <option value="auto">
                             自動 →{" "}
-                            {languageNames[resolveTarget(query, profile)]}
+                            {
+                              languageNames[
+                                resolveTarget(query, {
+                                  ...profile,
+                                  smartTarget: true,
+                                })
+                              ]
+                            }
                           </option>
                           {Object.entries(languageNames).map(([id, name]) => (
                             <option key={id} value={id}>
@@ -899,8 +1033,18 @@ function App() {
                       ref={inputRef}
                       aria-label="查詢文字"
                       value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="貼上你剛遇到的外文，例如：Can we circle back on this after lunch?"
+                      onChange={(e) => changeQuery(e.target.value)}
+                      onCompositionStart={() => {
+                        setComposing(true);
+                        translationAbort.current?.abort();
+                        requestRef.current++;
+                        setBusy(false);
+                      }}
+                      onCompositionEnd={(e) => {
+                        setComposing(false);
+                        changeQuery(e.currentTarget.value);
+                      }}
+                      placeholder="直接打字或貼上，例如：我想把會議改到明天下午。"
                       maxLength={6000}
                       rows={quick ? 3 : 2}
                     />
@@ -922,9 +1066,26 @@ function App() {
                         ) : (
                           <Sparkles size={15} />
                         )}{" "}
-                        {busy ? "正在查詢…" : "快懂一下"}
+                        {busy ? "正在處理…" : "翻譯／查字"}
                         <ArrowRight size={15} />
                       </button>
+                    </div>
+                    <div className="auto-translation-controls">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={profile.autoTranslate !== false}
+                          onChange={(e) =>
+                            updateProfile({ autoTranslate: e.target.checked })
+                          }
+                        />
+                        停筆 1 秒自動翻譯／查字
+                      </label>
+                      <span>
+                        {profile.freeTranslationConsent
+                          ? "已啟用免費整句翻譯 · MyMemory"
+                          : "本機查字已啟用；整句翻譯首次需同意"}
+                      </span>
                     </div>
                   </section>
                   {!quick && (
@@ -954,6 +1115,39 @@ function App() {
                 </div>
                 {result && (
                   <section className="result-panel">
+                    {busy && (
+                      <div className="translation-status" role="status">
+                        <LoaderCircle className="spin" size={15} />
+                        正在翻譯，原文會保留…
+                        <button
+                          onClick={() => {
+                            translationAbort.current?.abort();
+                            requestRef.current++;
+                            setBusy(false);
+                          }}
+                        >
+                          停止
+                        </button>
+                      </div>
+                    )}
+                    {translationError && (
+                      <div className="translation-failure" role="alert">
+                        <p>{translationError}</p>
+                        <button
+                          className="outline-button"
+                          disabled={busy}
+                          onClick={requestFreeTranslation}
+                        >
+                          重試這段翻譯
+                        </button>
+                        <button
+                          className="text-button"
+                          onClick={() => setModal("online")}
+                        >
+                          Google 翻譯備用入口
+                        </button>
+                      </div>
+                    )}
                     <div className="result-tabs">
                       <div role="tablist" aria-label="結果分類">
                         {(
@@ -977,20 +1171,22 @@ function App() {
                       <span
                         className={`result-source ${result.mode === "online" ? "online" : ""}`}
                       >
-                        {result.mode === "online" ? (
+                        {result.mode === "online" || result.translation ? (
                           <Cloud size={12} />
                         ) : (
                           <WifiOff size={12} />
                         )}{" "}
-                        {result.mode === "online"
-                          ? "AI 連線解釋"
-                          : result.mode === "dictionary"
-                            ? result.dictionary?.translationZh
-                              ? "英漢詞庫"
-                              : "英文辭典"
-                            : result.mode === "miss"
-                              ? "接著翻譯整句"
-                              : "離線用語庫"}
+                        {result.translation
+                          ? "免費翻譯 · MyMemory"
+                          : result.mode === "online"
+                            ? "AI 連線解釋"
+                            : result.mode === "dictionary"
+                              ? result.dictionary?.translationZh
+                                ? "英漢詞庫"
+                                : "英文辭典"
+                              : result.mode === "miss"
+                                ? "接著翻譯整句"
+                                : "離線用語庫"}
                       </span>
                     </div>
                     {result.mode === "miss" ? (
@@ -998,17 +1194,36 @@ function App() {
                         <span className="empty-avatar">
                           <PixelAvatar kind={profile.avatar} size={50} />
                         </span>
-                        <FreeTranslation
-                          text={result.query}
-                          source={profile.source}
-                          target={resolveTarget(result.query, profile)}
-                          onCopy={() => void copy(result.query)}
-                          onSave={() => {
-                            setQuery(result.query);
-                            setManualDraft("");
-                            setModal("manual");
-                          }}
-                        />
+                        {!busy && (
+                          <div className="inline-translate-start">
+                            <h3>直接在快懂裡看翻譯</h3>
+                            <p>
+                              支援自己打字，也支援整句。免費服務需要網路，免帳號與金鑰。
+                            </p>
+                            <button
+                              className="primary-button"
+                              onClick={requestFreeTranslation}
+                            >
+                              {profile.freeTranslationConsent
+                                ? "翻譯這段文字"
+                                : "啟用免費整句翻譯"}
+                            </button>
+                          </div>
+                        )}
+                        <details className="translation-fallback">
+                          <summary>需要其他方式？Google 翻譯備用入口</summary>
+                          <FreeTranslation
+                            text={result.query}
+                            source={profile.source}
+                            target={resolveTarget(result.query, profile)}
+                            onCopy={() => void copy(result.query)}
+                            onSave={() => {
+                              setQuery(result.query);
+                              setManualDraft("");
+                              setModal("manual");
+                            }}
+                          />
+                        </details>
                         <button
                           className="text-button"
                           disabled={busy}
@@ -1025,26 +1240,30 @@ function App() {
                             <div className="meaning-main">
                               <div className="term-label">
                                 <span className="pixel-spark">✦</span>
-                                {result.mode === "dictionary"
-                                  ? result.dictionary?.word
-                                  : result.mode === "online"
-                                    ? result.analysis?.language
-                                    : term?.region}
+                                {result.translation
+                                  ? `${languageNames[result.translation.source]} → ${languageNames[result.translation.target]}`
+                                  : result.mode === "dictionary"
+                                    ? result.dictionary?.word
+                                    : result.mode === "online"
+                                      ? result.analysis?.language
+                                      : term?.region}
                                 {term && (
                                   <span className="tone-chip">{term.tone}</span>
                                 )}
                               </div>
                               <h3>
-                                {result.mode === "online"
-                                  ? result.analysis?.translation
-                                  : result.mode === "dictionary"
-                                    ? result.dictionary?.translationZh ||
-                                      result.dictionary?.senses[0]
-                                        ?.definitions[0] ||
-                                      result.dictionary?.word
-                                    : sentenceMatch
-                                      ? term?.translation
-                                      : term?.meaning}
+                                {result.translation
+                                  ? result.translation.text
+                                  : result.mode === "online"
+                                    ? result.analysis?.translation
+                                    : result.mode === "dictionary"
+                                      ? result.dictionary?.translationZh ||
+                                        result.dictionary?.senses[0]
+                                          ?.definitions[0] ||
+                                        result.dictionary?.word
+                                      : sentenceMatch
+                                        ? term?.translation
+                                        : term?.meaning}
                               </h3>
                               {foundPhrase && (
                                 <div className="partial-note">
@@ -1059,10 +1278,13 @@ function App() {
                                     : "這個詞尚無繁中詞義，先顯示英文辭義；下方可接著免費翻譯。"}
                                 </div>
                               )}
-                              {result.dictionary && (
-                                <p className="phonetic">{result.dictionary.word}</p>
+                              {result.dictionary && !result.translation && (
+                                <p className="phonetic">
+                                  {result.dictionary.word}
+                                </p>
                               )}
-                              {result.dictionary?.translationZh &&
+                              {!result.translation &&
+                                result.dictionary?.translationZh &&
                                 result.dictionary.senses[0] && (
                                   <p className="english-definition">
                                     {result.dictionary.senses[0].definitions.join(
@@ -1071,9 +1293,11 @@ function App() {
                                   </p>
                                 )}
                               <p className="meaning-note">
-                                {result.analysis?.meaning ||
-                                  term?.note ||
-                                  result.dictionary?.senses[0]?.examples[0]}
+                                {result.translation
+                                  ? `機器翻譯${result.translation.cached ? " · 本次工作階段快取" : ""}。來源辨識不準時，可在左側手動選擇；本服務不提供文法校正。`
+                                  : result.analysis?.meaning ||
+                                    term?.note ||
+                                    result.dictionary?.senses[0]?.examples[0]}
                               </p>
                               {result.analysis?.uncertainty && (
                                 <p className="uncertainty">
@@ -1097,7 +1321,8 @@ function App() {
                                   onClick={() =>
                                     speak(
                                       result.query,
-                                      result.analysis?.language ||
+                                      result.translation?.source ||
+                                        result.analysis?.language ||
                                         term?.language ||
                                         "en",
                                     )
@@ -1120,16 +1345,12 @@ function App() {
                                 {!result.analysis && (
                                   <button
                                     disabled={busy}
-                                    onClick={() =>
-                                      desktop &&
-                                      profile.allowOnline &&
-                                      profile.serviceUrl
-                                        ? void runLookup(result.query, true)
-                                        : setModal("online")
-                                    }
+                                    onClick={requestFreeTranslation}
                                   >
                                     <Cloud size={14} />
-                                    免費翻譯整句
+                                    {result.translation
+                                      ? "重新翻譯"
+                                      : "在這裡翻譯整句"}
                                   </button>
                                 )}
                               </div>
@@ -1286,11 +1507,7 @@ function App() {
                             <button
                               className="text-button"
                               disabled={busy}
-                              onClick={() =>
-                                profile.allowOnline && profile.serviceUrl
-                                  ? runLookup(result.query, true)
-                                  : setModal("online")
-                              }
+                              onClick={requestFreeTranslation}
                             >
                               <Cloud size={14} />
                               免費翻譯想回的句子
@@ -1301,20 +1518,24 @@ function App() {
                         <div className="result-foot">
                           <span>
                             <ShieldCheck size={12} />
-                            {result.mode === "online"
-                              ? "AI 解釋可能有誤，重要內容請再確認。"
-                              : term
-                                ? `用語筆記 · 整理日期 ${term.checked}`
-                                : result.dictionary?.translationZh
-                                  ? "ECDICT · MIT / WordNet · CC BY 4.0"
-                                  : "Open English WordNet 2025 · CC BY 4.0"}
+                            {result.translation
+                              ? "MyMemory 免費翻譯 · 重要內容請核對。"
+                              : result.mode === "online"
+                                ? "AI 解釋可能有誤，重要內容請再確認。"
+                                : term
+                                  ? `用語筆記 · 整理日期 ${term.checked}`
+                                  : result.dictionary?.translationZh
+                                    ? "ECDICT · MIT / WordNet · CC BY 4.0"
+                                    : "Open English WordNet 2025 · CC BY 4.0"}
                           </span>
                           <a
                             href={
-                              term?.source ||
-                              (result.dictionary?.translationZh
-                                ? "https://github.com/skywind3000/ECDICT"
-                                : "https://en-word.net/")
+                              result.translation
+                                ? "https://mymemory.translated.net/doc/spec.php"
+                                : term?.source ||
+                                  (result.dictionary?.translationZh
+                                    ? "https://github.com/skywind3000/ECDICT"
+                                    : "https://en-word.net/")
                             }
                             target="_blank"
                             rel="noreferrer"
@@ -1331,9 +1552,7 @@ function App() {
                   <div className="lookup-welcome" role="status">
                     <LoaderCircle className="spin" size={25} />
                     <h3>正在載入詞庫…</h3>
-                    <p>
-                      第一次查詢會下載對應字首的資料。文字已保留，稍候就好。
-                    </p>
+                    <p>正在查字或取得譯文。文字已保留，稍候就好。</p>
                   </div>
                 )}
                 {!result && !busy && (
@@ -1341,7 +1560,7 @@ function App() {
                     <PixelAvatar kind={profile.avatar} size={45} />
                     <h3>先試一個字，就知道怎麼用。</h3>
                     <p>
-                      貼上文字，或按左邊的範例。單字先查繁中詞義；整句會提供免費翻譯入口。
+                      直接打字或貼上，停筆後自動查詢。單字先查繁中詞義；啟用免費整句翻譯後，譯文直接顯示在這裡。
                     </p>
                     <span>不需要帳號，也不用填金鑰。</span>
                   </div>
@@ -1862,6 +2081,34 @@ function App() {
               <h1>照你的步調，設定就好。</h1>
               <section className="settings-box">
                 <h2>
+                  <Languages size={18} />
+                  免費整句翻譯
+                </h2>
+                <p>
+                  MyMemory
+                  提供畫面內翻譯。啟用後查詢文字會交給服務處理，可能長期保留；請勿輸入機密。匿名每日
+                  5,000 字元，實際額度由服務按網路 IP 計算。
+                </p>
+                <p className="help-note">
+                  {profile.freeTranslationConsent
+                    ? "目前已啟用。停用後只使用本機辭庫，不再傳送新的翻譯請求。"
+                    : "目前未啟用，仍可使用本機辭庫與小課。"}
+                </p>
+                <button
+                  className="outline-button"
+                  onClick={() =>
+                    profile.freeTranslationConsent
+                      ? updateProfile({ freeTranslationConsent: false })
+                      : setModal("free-consent")
+                  }
+                >
+                  {profile.freeTranslationConsent
+                    ? "停用免費整句翻譯"
+                    : "啟用免費整句翻譯"}
+                </button>
+              </section>
+              <section className="settings-box">
+                <h2>
                   <Keyboard size={18} />
                   桌面快查
                 </h2>
@@ -2208,7 +2455,9 @@ function App() {
                 </li>
                 <li>
                   <strong>直接看繁中意思</strong>
-                  <span>整句或其他語言，按鈕會開啟免費 Google 翻譯。</span>
+                  <span>
+                    停筆後自動查字；啟用免費整句翻譯後，不用跳頁就能看譯文。
+                  </span>
                 </li>
                 <li>
                   <strong>存起來，再學一點</strong>
@@ -2238,6 +2487,60 @@ function App() {
                 }}
               >
                 直接貼上自己的文字
+              </button>
+            </>
+          )}
+          {modal === "free-consent" && (
+            <>
+              <Languages size={30} />
+              <h2>啟用免費整句翻譯</h2>
+              <p>
+                譯文直接顯示在快懂，免帳號與 API
+                金鑰。啟用後會將你查詢的文字、來源與目標語言交給 MyMemory
+                翻譯服務；服務可能長期保留查詢，請勿輸入公司機密、密碼或私人敏感資料。
+              </p>
+              <p>
+                勾選「停筆 1
+                秒自動翻譯／查字」時，會在你打字完成後自動傳送；可隨時取消勾選，或到偏好設定停用整句翻譯。
+              </p>
+              <p className="help-note">
+                匿名額度為每日 5,000 字元，按服務端網路 IP
+                計算；同一辦公室可能共用。達限不收費，會顯示原因並提供備用方式。
+              </p>
+              <div className="free-policy-links">
+                <a
+                  href="https://mymemory.translated.net/terms-and-conditions"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  資料處理條款
+                </a>
+                <a
+                  href="https://mymemory.translated.net/doc/usagelimits.php"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  免費用量限制
+                </a>
+              </div>
+              <button
+                className="primary-button"
+                onClick={() => {
+                  const next = {
+                    ...profileRef.current,
+                    freeTranslationConsent: true,
+                  };
+                  saveProfile(next);
+                  profileRef.current = next;
+                  setProfile(next);
+                  setModal(null);
+                  void runLookup(query, false, true);
+                }}
+              >
+                同意並在這裡翻譯
+              </button>
+              <button className="text-button" onClick={() => setModal(null)}>
+                先使用本機查字
               </button>
             </>
           )}

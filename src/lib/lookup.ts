@@ -146,6 +146,7 @@ export async function lookupLocal(
 }
 export function lookupMeaning(result: LookupResult) {
   return (
+    result.translation?.text ||
     result.analysis?.translation ||
     (result.term && normalize(result.query) === normalize(result.term.example)
       ? result.term.translation

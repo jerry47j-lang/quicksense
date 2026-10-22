@@ -1,6 +1,6 @@
 {
   "name": "quicksense",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
+    "franc-min": "^6.2.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
